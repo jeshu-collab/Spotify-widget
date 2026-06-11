@@ -1,0 +1,17 @@
+{
+  "name": "spotify-widget",
+  "version": "1.0.0",
+  "description": "Windows 11 Spotify Widget",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "spotify-web-api-node": "^5.0.2"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}

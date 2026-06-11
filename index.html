@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; img-src * data: blob:;">
+  <link rel="stylesheet" href="style.css">
+  <title>Spotify Widget</title>
+</head>
+<body>
+
+  <div class="widget-container">
+    <img id="album-art" src="https://via.placeholder.com/100" alt="Album Art">
+    <div class="song-details">
+      <h1 id="track-title">Waiting for Spotify...</h1>
+      <h2 id="artist-name">Please log in!</h2>
+      <div class="progress-container">
+        <div id="progress-bar" style="width: 0%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    ipcRenderer.on('update-track', (event, track) => {
+      try {
+        document.getElementById('track-title').innerText = track.title;
+        document.getElementById('artist-name').innerText = track.artist;
+        document.getElementById('album-art').src = track.albumArt;
+        
+        const percentage = (track.progress / track.duration) * 100;
+        document.getElementById('progress-bar').style.width = percentage + '%';
+      } catch (error) {
+        console.error("Error updating the UI:", error);
+      }
+    });
+  </script>
+
+</body>
+</html>
