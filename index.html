@@ -17,6 +17,11 @@
       <div class="progress-container">
         <div id="progress-bar" style="width: 0%;"></div>
       </div>
+      
+      <div class="time-container">
+        <span id="current-time">0:00</span>
+        <span id="total-time">0:00</span>
+      </div>
 
       <div class="controls-container">
         <button class="control-btn" onclick="sendCommand('prev')">
@@ -32,76 +37,136 @@
     </div>
   </div>
 
-  <script>
-    const { ipcRenderer } = require('electron');
+<script>
+    const { ipcRenderer, clipboard } = require('electron');
 
-    // 60FPS Prediction Variables
-    let currentProgress = 0;
-    let currentDuration = 1;
-    let lastUpdateTime = Date.now();
+    // 1. GAME LOOP VARIABLES
+    let localProgress = 0;
+    let currentDuration = 1000;
     let isPlaying = false;
+    let lastFrameTime = Date.now();
+    
+    // Trackers to catch Spotify's lag
+    let currentTrackTitle = "";
+    let lastWindowsProgress = -1;
 
-    // Save the SVGs as variables
     const playIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
     const pauseIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 
-    // 1. Receive absolute truth from the background worker
+    // 2. HELPER FUNCTIONS
+    function formatTime(ms) {
+      if (isNaN(ms) || ms <= 0) return "0:00";
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    }
+
+    function updateVisuals() {
+      document.getElementById('current-time').innerText = formatTime(localProgress);
+      document.getElementById('total-time').innerText = formatTime(currentDuration);
+      let percentage = (localProgress / currentDuration) * 100;
+      if (percentage > 100) percentage = 100;
+      document.getElementById('progress-bar').style.width = percentage + '%';
+    }
+
+    // 3. RECEIVE DATA FROM WINDOWS (THE IRONCLAD FILTER)
     ipcRenderer.on('update-track', (event, track) => {
       try {
         document.getElementById('track-title').innerText = track.title;
         document.getElementById('artist-name').innerText = track.artist;
         document.getElementById('album-art').src = track.albumArt;
         
-        // --- THE FIX: Swap the Play/Pause Icon ---
         const btn = document.getElementById('play-pause-btn');
-        if (track.isPlaying) {
-          btn.innerHTML = pauseIcon;
-        } else {
-          btn.innerHTML = playIcon;
-        }
-        // -----------------------------------------
+        btn.innerHTML = track.isPlaying ? pauseIcon : playIcon;
 
-        // Sync our math variables
-        currentProgress = track.progress;
         currentDuration = track.duration;
         isPlaying = track.isPlaying;
-        lastUpdateTime = Date.now();
+
+        // THE FIX: Stale Data Rejection
+        // If Spotify is sending the exact same time over and over, IGNORE IT.
+        if (track.progress !== lastWindowsProgress || track.title !== currentTrackTitle) {
+            
+            const drift = Math.abs(track.progress - localProgress);
+            
+            // Only snap the bar if the song changed OR if you clicked a different part of the song (>3 seconds off)
+            if (track.title !== currentTrackTitle || drift > 3000) {
+                localProgress = track.progress;
+                currentTrackTitle = track.title;
+            }
+            
+            lastWindowsProgress = track.progress; // Save the new time
+        }
+
       } catch (error) {
         console.error("UI Error:", error);
       }
     });
 
-    // 2. The Buttery Smooth Animation Loop
+    // 4. THE 60FPS GAME LOOP
     function animateProgressBar() {
+      const now = Date.now();
+      const deltaTime = now - lastFrameTime;
+      lastFrameTime = now; 
+
       if (isPlaying && currentDuration > 0) {
-        const now = Date.now();
-        const timePassed = now - lastUpdateTime;
-        
-        // Predict the song's position locally for 60fps smoothness
-        const estimatedProgress = currentProgress + timePassed;
-        let percentage = (estimatedProgress / currentDuration) * 100;
-        
-        if (percentage > 100) percentage = 100;
-        document.getElementById('progress-bar').style.width = percentage + '%';
+        localProgress += deltaTime;
+        if (localProgress > currentDuration) localProgress = currentDuration;
+        updateVisuals();
+      } else if (!isPlaying) {
+        updateVisuals(); // Lock the UI perfectly when paused
       }
+      
       requestAnimationFrame(animateProgressBar);
     }
     
     animateProgressBar();
 
-    // Beam commands up to main.js when buttons are clicked
-    // Beam commands up to main.js when buttons are clicked
+    // 5. BUTTON CONTROLS
     function sendCommand(cmd) {
       ipcRenderer.send('media-command', cmd);
-
-      // --- OPTIMISTIC UI INSTANT FEEDBACK ---
-      // If we clicked play/pause, instantly flip the icon and freeze the progress bar
-      // without waiting for Windows to confirm it!
       if (cmd === 'toggle') {
         const btn = document.getElementById('play-pause-btn');
-        isPlaying = !isPlaying; // Instantly flip the math state
-        btn.innerHTML = isPlaying ? pauseIcon : playIcon; // Instantly flip the icon
+        isPlaying = !isPlaying; 
+        btn.innerHTML = isPlaying ? pauseIcon : playIcon; 
       }
+    }
+
+    // 6. QUICK SHARE
+    function shareTrack() {
+      const title = document.getElementById('track-title').innerText;
+      const artist = document.getElementById('artist-name').innerText;
+      if (title !== "Waiting for Media..." && title !== "Waiting for Spotify...") {
+        clipboard.writeText(`🎵 Vibing to: ${title} - ${artist}`);
+        const shareBtn = document.querySelector('.share-btn');
+        const originalIcon = shareBtn.innerHTML;
+        shareBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#1DB954"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+        setTimeout(() => { shareBtn.innerHTML = originalIcon; }, 1500);
+      }
+    }
+
+    // 7. LYRICS UI LOGIC (PHASE 1)
+    let isLyricsOpen = false;
+
+    function toggleLyrics() {
+      const drawer = document.getElementById('lyrics-drawer');
+      const btn = document.querySelector('.toggle-lyrics-btn');
+      
+      isLyricsOpen = !isLyricsOpen;
+      
+      if (isLyricsOpen) {
+        drawer.classList.add('expanded');
+        btn.classList.add('open');
+      } else {
+        drawer.classList.remove('expanded');
+        btn.classList.remove('open');
+      }
+    }
+
+    function fetchLyrics() {
+      document.getElementById('lyrics-prompt').classList.add('hidden');
+      document.getElementById('live-lyrics-container').classList.remove('hidden');
+      console.log("User requested lyrics. Ready for Phase 2!");
     }
   </script>
 </body>

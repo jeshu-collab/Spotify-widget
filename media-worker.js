@@ -37,8 +37,9 @@ setInterval(() => {
         title: session.media.title || "Unknown Title",
         artist: session.media.artist || "Unknown Artist",
         albumArt: coverArt,
-        progress: session.timeline ? session.timeline.position / 10000 : 0,
-        duration: session.timeline ? session.timeline.duration / 10000 : 1,
+        // Multiply by 1000 to convert seconds to milliseconds for our UI timer
+        progress: session.timeline ? Math.floor(session.timeline.position * 1000) : 0,
+        duration: session.timeline ? Math.floor(session.timeline.duration * 1000) : 1000,
         isPlaying: session.playback ? session.playback.playbackStatus === 4 : false
       });
     }
