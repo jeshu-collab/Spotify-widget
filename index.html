@@ -8,36 +8,55 @@
 </head>
 <body>
 
-  <div class="widget-container">
-    <img id="album-art" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkAQMAAABpTeRvAAAABlBMVEUAAAD///+l2Z/dAAAAAXRSTlMAQObYZgAAABxJREFUeJztwQENAAAAwqD3P20ON6AAAAAAAADg1w1vAAABa9e6YAAAAABJRU5ErkJggg==" alt="Album Art">
-    <div class="song-details">
-      <h1 id="track-title">Waiting for Media...</h1>
-      <h2 id="artist-name">Play a song!</h2>
+  <div class="widget-container" id="main-widget">
+    
+    <div class="main-content">
       
-      <div class="progress-container">
-        <div id="progress-bar" style="width: 0%;"></div>
-      </div>
-      
-      <div class="time-container">
-        <span id="current-time">0:00</span>
-        <span id="total-time">0:00</span>
-      </div>
+      <img id="album-art" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkAQMAAABpTeRvAAAABlBMVEUAAAD///+l2Z/dAAAAAXRSTlMAQObYZgAAABxJREFUeJztwQENAAAAwqD3P20ON6AAAAAAAADg1w1vAAABa9e6YAAAAABJRU5ErkJggg==" alt="Album Art">
 
-      <div class="controls-container">
-        <button class="control-btn" onclick="sendCommand('prev')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-        </button>
-        <button id="play-pause-btn" class="control-btn play-btn" onclick="sendCommand('toggle')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-        <button class="control-btn" onclick="sendCommand('next')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-        </button>
+      <div class="song-details">
+        <h1 id="track-title">Waiting for Media...</h1>
+        <h2 id="artist-name">Play a song!</h2>
+        
+        <div class="progress-container">
+          <div id="progress-bar" style="width: 0%;"></div>
+        </div>
+        
+        <div class="time-container">
+          <span id="current-time">0:00</span>
+          <span id="total-time">0:00</span>
+        </div>
+
+        <div class="controls-container">
+          <button class="control-btn" onclick="sendCommand('prev')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+          </button>
+          <button id="play-pause-btn" class="control-btn play-btn" onclick="sendCommand('toggle')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <button class="control-btn" onclick="sendCommand('next')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          </button>
+          <button class="control-btn share-btn" onclick="shareTrack()" title="Copy to Clipboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+          </button>
+          <button class="control-btn toggle-lyrics-btn" onclick="toggleLyrics()" title="Show Lyrics">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white" id="chevron-icon"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+          </button>
+        </div>
+      </div> 
+    </div> 
+
+    <div id="lyrics-drawer" class="lyrics-drawer">
+      <div id="live-lyrics-container">
+        <div id="lyrics-content">
+          </div>
       </div>
     </div>
+
   </div>
 
-<script>
+  <script>
     const { ipcRenderer, clipboard } = require('electron');
 
     // 1. GAME LOOP VARIABLES
@@ -84,7 +103,6 @@
         isPlaying = track.isPlaying;
 
         // THE FIX: Stale Data Rejection
-        // If Spotify is sending the exact same time over and over, IGNORE IT.
         if (track.progress !== lastWindowsProgress || track.title !== currentTrackTitle) {
             
             const drift = Math.abs(track.progress - localProgress);
@@ -92,10 +110,16 @@
             // Only snap the bar if the song changed OR if you clicked a different part of the song (>3 seconds off)
             if (track.title !== currentTrackTitle || drift > 3000) {
                 localProgress = track.progress;
+                
+                // NEW: Auto-fetch lyrics if song changes while drawer is open
+                if (track.title !== currentTrackTitle && isLyricsOpen) {
+                    setTimeout(() => fetchLyrics(), 500); 
+                }
+
                 currentTrackTitle = track.title;
             }
             
-            lastWindowsProgress = track.progress; // Save the new time
+            lastWindowsProgress = track.progress; 
         }
 
       } catch (error) {
@@ -114,9 +138,10 @@
         if (localProgress > currentDuration) localProgress = currentDuration;
         updateVisuals();
       } else if (!isPlaying) {
-        updateVisuals(); // Lock the UI perfectly when paused
+        updateVisuals();
       }
       
+      syncLyrics(); // Sync lyrics every frame
       requestAnimationFrame(animateProgressBar);
     }
     
@@ -145,28 +170,128 @@
       }
     }
 
-    // 7. LYRICS UI LOGIC (PHASE 1)
+    // ==========================================
+    // 7. THE LYRICS ENGINE (Phase 2)
+    // ==========================================
     let isLyricsOpen = false;
+    let currentLyrics = [];
+    let activeLyricIndex = -1;
+    let loadedTrackId = ""; 
 
     function toggleLyrics() {
       const drawer = document.getElementById('lyrics-drawer');
       const btn = document.querySelector('.toggle-lyrics-btn');
       
       isLyricsOpen = !isLyricsOpen;
+      ipcRenderer.send('toggle-lyrics-window', isLyricsOpen);
       
       if (isLyricsOpen) {
         drawer.classList.add('expanded');
         btn.classList.add('open');
+        if (loadedTrackId !== currentTrackTitle) {
+          fetchLyrics();
+        }
       } else {
         drawer.classList.remove('expanded');
         btn.classList.remove('open');
       }
     }
 
-    function fetchLyrics() {
-      document.getElementById('lyrics-prompt').classList.add('hidden');
-      document.getElementById('live-lyrics-container').classList.remove('hidden');
-      console.log("User requested lyrics. Ready for Phase 2!");
+    async function fetchLyrics() {
+      const title = document.getElementById('track-title').innerText;
+      const artist = document.getElementById('artist-name').innerText;
+      
+      if (title === "Waiting for Media...") return;
+
+      const contentDiv = document.getElementById('lyrics-content');
+      contentDiv.innerHTML = '<p class="lyric-line active">Searching for lyrics...</p>';
+      contentDiv.style.transform = `translateY(0px)`;
+      
+      try {
+        const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) throw new Error("Not found");
+        const data = await response.json();
+
+        if (data && data.syncedLyrics) {
+          parseLyrics(data.syncedLyrics);
+          loadedTrackId = currentTrackTitle;
+        } else {
+           contentDiv.innerHTML = '<p class="lyric-line active">No synced lyrics available 😔</p>';
+           currentLyrics = [];
+        }
+      } catch (err) {
+         contentDiv.innerHTML = '<p class="lyric-line active">No lyrics found 😔</p>';
+         currentLyrics = [];
+      }
+    }
+
+    function parseLyrics(lrcString) {
+      const lines = lrcString.split('\n');
+      currentLyrics = [];
+      const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/;
+
+      lines.forEach(line => {
+        const match = timeRegex.exec(line);
+        if (match) {
+          const minutes = parseInt(match[1]);
+          const seconds = parseInt(match[2]);
+          let ms = parseInt(match[3]);
+          if (match[3].length === 2) ms *= 10; 
+
+          const timeMs = (minutes * 60 * 1000) + (seconds * 1000) + ms;
+          const text = line.replace(timeRegex, '').trim();
+
+          if (text) currentLyrics.push({ time: timeMs, text: text });
+        }
+      });
+      renderLyrics();
+    }
+
+    function renderLyrics() {
+      const contentDiv = document.getElementById('lyrics-content');
+      contentDiv.innerHTML = '';
+
+      currentLyrics.forEach((lyric, index) => {
+        const p = document.createElement('p');
+        p.className = 'lyric-line';
+        p.id = `lyric-${index}`;
+        p.innerText = lyric.text;
+        contentDiv.appendChild(p);
+      });
+      activeLyricIndex = -1; 
+    }
+
+    // THE SYNC LOOP
+    function syncLyrics() {
+      if (!isLyricsOpen || currentLyrics.length === 0) return;
+
+      let newActiveIndex = -1;
+      for (let i = 0; i < currentLyrics.length; i++) {
+        if (localProgress >= currentLyrics[i].time) {
+          newActiveIndex = i;
+        } else {
+          break; 
+        }
+      }
+
+      if (newActiveIndex !== activeLyricIndex && newActiveIndex !== -1) {
+        if (activeLyricIndex !== -1) {
+          const oldEl = document.getElementById(`lyric-${activeLyricIndex}`);
+          if (oldEl) oldEl.classList.remove('active');
+        }
+
+        const newEl = document.getElementById(`lyric-${newActiveIndex}`);
+        if (newEl) {
+          newEl.classList.add('active');
+          
+          const containerHeight = document.getElementById('live-lyrics-container').clientHeight;
+          const offset = newEl.offsetTop - (containerHeight / 2) + (newEl.clientHeight / 2);
+          document.getElementById('lyrics-content').style.transform = `translateY(-${Math.max(0, offset)}px)`;
+        }
+        activeLyricIndex = newActiveIndex;
+      }
     }
   </script>
 </body>

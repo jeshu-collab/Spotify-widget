@@ -31,16 +31,40 @@ ipcMain.on('media-command', (event, command) => {
   });
 });
 
+
+// --- NEW: DYNAMIC WINDOW RESIZING ---
+ipcMain.on('toggle-lyrics-window', (event, isExpanding) => {
+  if (!widget) return;
+  
+  const currentBounds = widget.getBounds();
+  
+  if (isExpanding) {
+    // Expand the OS window to make room for the lyrics drawer
+    widget.setBounds({ 
+      width: currentBounds.width, 
+      height: 300 
+    });
+  } else {
+    // Shrink the OS window back to the mini-player size
+    widget.setBounds({ 
+      width: currentBounds.width, 
+      height: 150 
+    });
+  }
+});
+
 // --- ELECTRON WINDOW ---
 function createWidget() {
   widget = new BrowserWindow({
     width: 350,
-    height: 150,
+    height: 140, // Reduced height from 160 to 140 to eliminate bottom dead space
+    minWidth: 300,
+    minHeight: 120,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: false, // THE FIX: Locks the window so the UI can't shatter
+    resizable: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -50,7 +74,6 @@ function createWidget() {
   });
 
   widget.loadFile('index.html');
-  widget.center(); 
   startMediaTracker();
 }
 
