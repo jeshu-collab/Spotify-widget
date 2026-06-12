@@ -38,8 +38,9 @@ function createWidget() {
     height: 150,
     frame: false,
     transparent: true,
-    alwaysOnTop: true, // Set to true so it floats over your work!
+    alwaysOnTop: true,
     skipTaskbar: true,
+    resizable: false, // THE FIX: Locks the window so the UI can't shatter
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -50,7 +51,6 @@ function createWidget() {
 
   widget.loadFile('index.html');
   widget.center(); 
-  
   startMediaTracker();
 }
 

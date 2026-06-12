@@ -31,6 +31,7 @@ body {
   border-radius: 10px;
   object-fit: cover;
   box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  flex-shrink: 0; /* THE FIX: Prevents the image from ever being squished */
 }
 
 .song-details {
@@ -99,6 +100,7 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   opacity: 0.8;
+  -webkit-app-region: no-drag; 
 }
 
 .control-btn:hover {
@@ -128,4 +130,20 @@ body {
   color: rgba(255, 255, 255, 0.5); /* Semi-transparent so it doesn't distract */
   margin-top: -8px; /* Pulls it up tight against the progress bar */
   margin-bottom: 8px;
+}
+
+/* Restores the perfect horizontal layout + Dragging */
+.widget-container {
+  display: flex;
+  flex-direction: row; 
+  align-items: center;
+  width: 340px;
+  height: 140px; 
+  padding: 15px;
+  border-radius: 16px;
+  background: rgba(30, 30, 30, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+  -webkit-app-region: drag; /* Keeps the glass background grabbable */
 }
