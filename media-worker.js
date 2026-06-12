@@ -1,31 +1,31 @@
 const { parentPort } = require('worker_threads');
 const { SMTCMonitor } = require('@coooookies/windows-smtc-monitor');
 
+// Baked-in Offline Image (prevents internet network crashes)
 const OFFLINE_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkAQMAAABpTeRvAAAABlBMVEUAAAD///+l2Z/dAAAAAXRSTlMAQObYZgAAABxJREFUeJztwQENAAAAwqD3P20ON6AAAAAAAADg1w1vAAABa9e6YAAAAABJRU5ErkJggg==';
 
 setInterval(() => {
   try {
     const session = SMTCMonitor.getCurrentMediaSession();
     
-    // 1. If NO session exists at all, reset.
+    // 1. If NO session exists at all, reset to sleep state.
     if (!session) {
       parentPort.postMessage({ title: "Waiting for Spotify...", artist: "Play a song!", albumArt: OFFLINE_IMAGE, progress: 0, duration: 1, isPlaying: false });
       return;
     }
 
-    // 2. Logic: If we have an AppID and it's NOT Spotify, ignore it.
-    // If we have NO AppID (undefined), but we DO have a song title, proceed!
+    // 2. The Ironclad Filter Logic
     const appId = session.sourceAppUserModelId ? session.sourceAppUserModelId.toLowerCase() : "";
     const hasSpotifyId = appId.includes('spotify');
     const hasMedia = session.media && (session.media.title || session.media.artist);
     
-    // Only block if we HAVE an AppID and it is NOT Spotify
+    // Only block if we HAVE an AppID and we know for sure it is NOT Spotify
     if (appId !== "" && !hasSpotifyId) {
       parentPort.postMessage({ title: "Waiting for Spotify...", artist: "Play a song!", albumArt: OFFLINE_IMAGE, progress: 0, duration: 1, isPlaying: false });
       return;
     }
 
-    // 3. If we are here, we have a valid session!
+    // 3. Valid Session! Beam data to the UI
     if (hasMedia) {
       let coverArt = OFFLINE_IMAGE;
       if (session.media.thumbnail) {
@@ -39,10 +39,10 @@ setInterval(() => {
         albumArt: coverArt,
         progress: session.timeline ? session.timeline.position / 10000 : 0,
         duration: session.timeline ? session.timeline.duration / 10000 : 1,
-        isPlaying: session.playbackInfo ? session.playbackInfo.playbackStatus === 4 : true
+        isPlaying: session.playback ? session.playback.playbackStatus === 4 : false
       });
     }
   } catch (err) {
-    // Silence errors
+    // Silence errors to keep the background loop running smoothly
   }
 }, 500);

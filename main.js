@@ -3,7 +3,7 @@ const { Worker } = require('worker_threads');
 const path = require('path');
 const { exec } = require('child_process');
 
-// 1. Ignore SSL/Certificate errors globally at the engine level before app is ready
+// 1. Ignore SSL/Certificate errors globally at the engine level
 app.commandLine.appendSwitch('ignore-certificate-errors');
 
 let widget;
@@ -22,15 +22,13 @@ function startMediaTracker() {
 }
 
 // --- NATIVE CONTROLS RECEIVER ---
+// --- NATIVE CONTROLS RECEIVER ---
 ipcMain.on('media-command', (event, command) => {
-  let keycode;
-  if (command === 'next') keycode = 176;     // Windows Media Next Track Key
-  if (command === 'prev') keycode = 177;     // Windows Media Prev Track Key
-  if (command === 'toggle') keycode = 179;   // Windows Media Play/Pause Key
-
-  if (keycode) {
-    exec(`powershell -command "(New-Object -ComObject WScript.Shell).SendKeys([char]${keycode})"`);
-  }
+  // We use cscript to run the VBS file invisibly. It takes roughly ~50ms instead of 2000ms!
+  const scriptPath = path.join(__dirname, 'media-keys.vbs');
+  exec(`cscript //nologo "${scriptPath}" ${command}`, (error) => {
+    if (error) console.error("Key press failed:", error);
+  });
 });
 
 // --- ELECTRON WINDOW ---
@@ -40,12 +38,11 @@ function createWidget() {
     height: 150,
     frame: false,
     transparent: true,
-    alwaysOnTop: false,
+    alwaysOnTop: true, // Set to true so it floats over your work!
     skipTaskbar: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      // 2. Allow insecure content and disable strict web security for local widget/placeholder assets
       webSecurity: false,
       allowRunningInsecureContent: true
     }
