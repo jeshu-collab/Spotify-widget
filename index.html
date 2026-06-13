@@ -64,7 +64,8 @@
     let currentDuration = 1000;
     let isPlaying = false;
     let lastFrameTime = Date.now();
-    
+    let isLyricsOpen = false;
+
     // Trackers to catch Spotify's lag
     let currentTrackTitle = "";
     let lastWindowsProgress = -1;
@@ -173,7 +174,7 @@
     // ==========================================
     // 7. THE LYRICS ENGINE (Phase 2)
     // ==========================================
-    let isLyricsOpen = false;
+
     let currentLyrics = [];
     let activeLyricIndex = -1;
     let loadedTrackId = ""; 
@@ -218,11 +219,11 @@
           parseLyrics(data.syncedLyrics);
           loadedTrackId = currentTrackTitle;
         } else {
-           contentDiv.innerHTML = '<p class="lyric-line active">No synced lyrics available 😔</p>';
+           contentDiv.innerHTML = '<p class="lyric-line active">No synced lyrics available</p>';
            currentLyrics = [];
         }
       } catch (err) {
-         contentDiv.innerHTML = '<p class="lyric-line active">No lyrics found 😔</p>';
+         contentDiv.innerHTML = '<p class="lyric-line active">No lyrics found</p>';
          currentLyrics = [];
       }
     }

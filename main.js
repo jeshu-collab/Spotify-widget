@@ -22,15 +22,12 @@ function startMediaTracker() {
 }
 
 // --- NATIVE CONTROLS RECEIVER ---
-// --- NATIVE CONTROLS RECEIVER ---
 ipcMain.on('media-command', (event, command) => {
-  // We use cscript to run the VBS file invisibly. It takes roughly ~50ms instead of 2000ms!
   const scriptPath = path.join(__dirname, 'media-keys.vbs');
   exec(`cscript //nologo "${scriptPath}" ${command}`, (error) => {
     if (error) console.error("Key press failed:", error);
   });
 });
-
 
 // --- NEW: DYNAMIC WINDOW RESIZING ---
 ipcMain.on('toggle-lyrics-window', (event, isExpanding) => {
@@ -39,17 +36,10 @@ ipcMain.on('toggle-lyrics-window', (event, isExpanding) => {
   const currentBounds = widget.getBounds();
   
   if (isExpanding) {
-    // Expand the OS window to make room for the lyrics drawer
-    widget.setBounds({ 
-      width: currentBounds.width, 
-      height: 300 
-    });
+    widget.setBounds({ width: currentBounds.width, height: 300 });
   } else {
-    // Shrink the OS window back to the mini-player size
-    widget.setBounds({ 
-      width: currentBounds.width, 
-      height: 150 
-    });
+    // FIXED: Shrunk back down to 140 instead of 150 to match your perfect padding!
+    widget.setBounds({ width: currentBounds.width, height: 140 }); 
   }
 });
 
@@ -57,9 +47,11 @@ ipcMain.on('toggle-lyrics-window', (event, isExpanding) => {
 function createWidget() {
   widget = new BrowserWindow({
     width: 350,
-    height: 140, // Reduced height from 160 to 140 to eliminate bottom dead space
+    height: 140, 
     minWidth: 300,
     minHeight: 120,
+    maxWidth: 500,   
+    maxHeight: 400,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -74,6 +66,10 @@ function createWidget() {
   });
 
   widget.loadFile('index.html');
+  
+  // THE MAGIC DEBUGGER: Forces the DevTools console to pop open!
+ // widget.webContents.openDevTools({ mode: 'detach' }); 
+  
   startMediaTracker();
 }
 
