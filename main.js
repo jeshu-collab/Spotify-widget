@@ -30,16 +30,23 @@ ipcMain.on('media-command', (event, command) => {
 });
 
 // --- NEW: DYNAMIC WINDOW RESIZING ---
+// --- NEW: DYNAMIC WINDOW RESIZING ---
+// --- NEW: DYNAMIC WINDOW RESIZING ---
 ipcMain.on('toggle-lyrics-window', (event, isExpanding) => {
   if (!widget) return;
   
   const currentBounds = widget.getBounds();
   
   if (isExpanding) {
+    // EXPANDING: Unlock maximum first, grow window, lock minimum
+    widget.setMaximumSize(500, 300);
     widget.setBounds({ width: currentBounds.width, height: 300 });
+    widget.setMinimumSize(300, 300);
   } else {
-    // FIXED: Shrunk back down to 140 instead of 150 to match your perfect padding!
+    // SHRINKING: Unlock minimum first, shrink window, lock maximum
+    widget.setMinimumSize(300, 140); // <-- THE FIX: Unlock the floor first!
     widget.setBounds({ width: currentBounds.width, height: 140 }); 
+    widget.setMaximumSize(500, 140); 
   }
 });
 
@@ -48,15 +55,21 @@ function createWidget() {
   widget = new BrowserWindow({
     width: 350,
     height: 140, 
-    minWidth: 300,
-    minHeight: 120,
+    
+    // THE RAILROAD TRACKS: 
+    // Width can stretch between 300 and 500
+    minWidth: 300,   
     maxWidth: 500,   
-    maxHeight: 400,
+    
+    // Height is strictly locked at 140 so you can't drag it up, down, or diagonally!
+    minHeight: 140,  
+    maxHeight: 140,  
+    
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: true,
+    resizable: true, // Turned back on so the left/right dragging works!
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -66,10 +79,6 @@ function createWidget() {
   });
 
   widget.loadFile('index.html');
-  
-  // THE MAGIC DEBUGGER: Forces the DevTools console to pop open!
- // widget.webContents.openDevTools({ mode: 'detach' }); 
-  
   startMediaTracker();
 }
 
