@@ -4,12 +4,27 @@
   "description": "Windows 11 Spotify Widget",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder"
   },
   "devDependencies": {
-    "electron": "^31.0.0"
+    "electron": "^31.0.0",
+    "electron-builder": "^26.15.3"
   },
   "dependencies": {
     "@coooookies/windows-smtc-monitor": "^1.0.12"
+  },
+  "build": {
+    "appId": "com.spotify.glasswidget",
+    "productName": "Spotify Glass Widget",
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "SpotifyWidget.exe"
+    },
+    "files": [
+      "**/*"
+    ]
   }
 }
