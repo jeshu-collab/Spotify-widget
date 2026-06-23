@@ -17,6 +17,9 @@
   "build": {
     "appId": "com.spotify.glasswidget",
     "productName": "Spotify Glass Widget",
+    "asarUnpack": [
+      "media-keys.vbs"
+    ],
     "win": {
       "target": "portable"
     },
