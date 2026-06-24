@@ -3,11 +3,13 @@ const { Worker } = require('worker_threads');
 const path = require('path');
 const { exec } = require('child_process');
 
-// 1. Ignore SSL/Certificate errors globally at the engine level
+// 1. Core Engine Switches
 app.commandLine.appendSwitch('ignore-certificate-errors');
 
+// ALL GLOBAL VARIABLE DECLARATIONS FIXED (NO DUPLICATES)
 let widget;
 let tray = null;
+let currentBaseVolume = 50;
 
 // --- MULTITHREADED ENGINE ---
 function startMediaTracker() {
@@ -26,7 +28,6 @@ function startMediaTracker() {
 ipcMain.on('media-command', (event, command) => {
   let scriptPath = path.join(__dirname, 'media-keys.vbs');
 
-  // THE FIX: If the app is packaged, route Windows to the unpacked folder!
   if (scriptPath.includes('app.asar')) {
     scriptPath = scriptPath.replace('app.asar', 'app.asar.unpacked');
   }
@@ -36,54 +37,73 @@ ipcMain.on('media-command', (event, command) => {
   });
 });
 
-// --- DYNAMIC WINDOW RESIZING ---
+// --- WIN32 HIGH-STABILITY ACCESSIBILITY AUDIO DISPATCH ---
+ipcMain.on('change-volume', (event, data) => {
+  if (!data || data.value === undefined) return;
+
+  if (data.value === currentBaseVolume) return;
+  const commandDirection = data.value > currentBaseVolume ? '175' : '174';
+  currentBaseVolume = data.value;
+
+  const runCmd = `powershell -NoProfile -Command "(New-Object -ComObject Wscript.Shell).SendKeys([char]${commandDirection})"`;
+  exec(runCmd, (error) => {
+    if (error) console.error("Volume execution failure:", error);
+  });
+});
+
+// --- DYNAMIC SLIDER POPOUT CANVAS EXPANSION MANAGEMENT ---
+ipcMain.on('toggle-volume-frame', (event, isExpanding) => {
+  if (!widget) return;
+  const bounds = widget.getBounds();
+  if (isExpanding) {
+    widget.setBounds({ width: 450, height: 140, x: bounds.x, y: bounds.y });
+  } else {
+    widget.setBounds({ width: 400, height: 140, x: bounds.x, y: bounds.y });
+  }
+});
+
 ipcMain.on('toggle-lyrics-window', (event, isExpanding) => {
   if (!widget) return;
 
   const currentBounds = widget.getBounds();
 
   if (isExpanding) {
-    // EXPANDING: Unlock maximum first, grow window, lock minimum
     widget.setMaximumSize(500, 300);
     widget.setBounds({ width: currentBounds.width, height: 300 });
     widget.setMinimumSize(300, 300);
   } else {
-    // SHRINKING: Unlock minimum first, shrink window, lock maximum
-    widget.setMinimumSize(300, 140); // <-- THE FIX: Unlock the floor first!
+    widget.setMinimumSize(300, 140);
     widget.setBounds({ width: currentBounds.width, height: 140 });
     widget.setMaximumSize(500, 140);
   }
 });
 
-// --- SYSTEM VOLUME CONTROLLER ---
-ipcMain.on('change-volume', (event, direction) => {
-  const volumeAction = direction === 'up'
-    ? '(New-Object -ComObject Wscript.Shell).SendKeys([char]175)' // VK_VOLUME_UP
-    : '(New-Object -ComObject Wscript.Shell).SendKeys([char]174)';// VK_VOLUME_DOWN
-
-  const psCommand = `powershell -NoProfile -Command "${volumeAction}"`;
-
-  exec(psCommand, (error) => {
-    if (error) console.error("Volume adjustment failed:", error);
-  });
-});
-
-
+// --- MAIN PROJECT WINDOW & SYSTEM TRAY BUILDER ---
 function createWidget() {
   widget = new BrowserWindow({
     width: 350,
     height: 140,
+    minWidth: 350,
+    maxWidth: 400,
+    minHeight: 140,
+    maxHeight: 140,
     frame: false,
     transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: true,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      webSecurity: false,
+      allowRunningInsecureContent: true
     }
   });
 
-  widget.loadFile(path.join(__dirname, 'index.html'));
+  widget.loadFile('index.html');
   startMediaTracker();
 
+  // SYSTEM TRAY IMPLEMENTATION (SAFE INSIDE STARTUP CYCLE)
   const iconPath = path.join(__dirname, 'tray-icon.ico');
   tray = new Tray(iconPath);
 
@@ -126,8 +146,9 @@ function createWidget() {
   });
 }
 
+// App Lifecycles
 app.whenReady().then(createWidget);
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
-});;
+});

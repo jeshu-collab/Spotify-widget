@@ -114,14 +114,14 @@ body {
 }
 
 /* =========================================
-   6. PERFECTLY SPACED CONTROLS ROW
+   6. BALANCED MEDIA CONTROLS ROW
    ========================================= */
 .controls-container {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 20px;
-  /* Enhanced luxury spacing */
+  gap: 24px;
+  /* Spacious, non-congested button spacing */
   margin-top: 12px;
   position: relative;
   width: 100%;
@@ -132,8 +132,13 @@ body {
   border: none;
   color: #ffffff;
   border-radius: 50%;
+
+  /* THE FIX: Forces an exact, non-flexible circular geometry ratio */
   width: 28px;
   height: 28px;
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -148,9 +153,9 @@ body {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* THE FIX: Automatically anchors the lyrics toggle icon directly to the right border wall */
 .toggle-lyrics-btn {
   margin-left: auto;
+  /* Clean right-alignment anchor */
   transition: transform 0.3s ease;
 }
 
@@ -159,37 +164,44 @@ body {
 }
 
 /* =========================================
-   7. HORIZONTAL INLINE VOLUME SLIDER
+   7. RIGHT-EDGE SLIDING VOLUME DOCK
    ========================================= */
 .volume-wrapper {
+  position: absolute;
+  right: 15px;
+  /* Aligned nicely near the right inner wall */
+  top: 50%;
+  transform: translateY(-50%);
+  /* Centered vertically on the frame */
   display: flex;
   align-items: center;
-  position: relative;
+  z-index: 100;
+  -webkit-app-region: no-drag;
 }
 
 .volume-slider-container {
   width: 0px;
   opacity: 0;
   overflow: hidden;
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
   display: flex;
   align-items: center;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
 }
 
-/* Active Extension: Slide layout track outward neatly */
-.volume-wrapper.active .volume-slider-container {
-  width: 85px;
-  /* Fits elegantly inside the extra 50px frame width */
-  opacity: 1;
-  margin: 0 6px;
-}
-
+/* Slide direction: Shifts layout inline to slide RIGHTWARD */
 .volume-wrapper.expand-right {
   flex-direction: row;
 }
 
 .volume-wrapper.expand-left {
   flex-direction: row-reverse;
+}
+
+/* Roll-out tracking expansion limits */
+.volume-wrapper.active .volume-slider-container {
+  width: 85px;
+  opacity: 1;
+  margin-left: 8px;
 }
 
 .volume-slider-container input[type="range"] {
@@ -275,4 +287,82 @@ body {
   font-size: 13px;
   margin-bottom: 8px;
   text-align: center;
+}
+
+/* =========================================
+   ANDROID-STYLE VOLUME POPUP OVERLAY
+   ========================================= */
+.volume-popup-capsule {
+  position: absolute;
+  /* Placed outside the 400px core widget zone */
+  left: 408px;
+  top: 15px;
+  width: 32px;
+  height: 110px;
+  background: rgba(24, 24, 24, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-15px) scale(0.9);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease;
+  z-index: 999999;
+}
+
+/* Open Animation state pops perfectly outside rightward */
+.volume-popup-capsule.show-popup {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0) scale(1);
+}
+
+/* CUSTOM HIGH-HITBOX TRACK COMPONENT */
+.custom-slider-track {
+  position: relative;
+  width: 12px;
+  /* Super thick layout path */
+  height: 85px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Expands structural click hitbox around the track invisible to the eye */
+.custom-slider-track::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  right: -10px;
+  top: -5px;
+  bottom: -5px;
+}
+
+.custom-slider-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #1DB954;
+  /* Spotify Accent Green */
+  border-radius: 6px;
+}
+
+.custom-slider-thumb {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 50%);
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  transition: transform 0.1s ease;
+}
+
+.custom-slider-track:hover .custom-slider-thumb {
+  transform: translate(-50%, 50%) scale(1.2);
 }

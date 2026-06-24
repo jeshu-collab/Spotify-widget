@@ -12,8 +12,14 @@
 
   <div class="widget-container" id="main-widget">
 
-    <div class="main-content">
+    <div id="volume-popup-capsule" class="volume-popup-capsule">
+      <div class="custom-slider-track" id="custom-volume-track">
+        <div class="custom-slider-fill" id="custom-volume-fill" style="height: 50%;"></div>
+        <div class="custom-slider-thumb" id="custom-volume-thumb" style="bottom: 50%;"></div>
+      </div>
+    </div>
 
+    <div class="main-content">
       <img id="album-art"
         src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkAQMAAABpTeRvAAAABlBMVEUAAAD///+l2Z/dAAAAAXRSTlMAQObYZgAAABxJREFUeJztwQENAAAAwqD3P20ON6AAAAAAAADg1w1vAAABa9e6YAAAAABJRU5ErkJggg=="
         alt="Album Art">
@@ -48,17 +54,12 @@
             </svg>
           </button>
 
-          <div id="volume-wrapper" class="volume-wrapper">
-            <button class="control-btn volume-btn" id="volume-btn" title="Adjust Volume">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                <path
-                  d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-              </svg>
-            </button>
-            <div id="volume-slider-container" class="volume-slider-container">
-              <input type="range" id="volume-range" min="0" max="100" value="50" step="2">
-            </div>
-          </div>
+          <button class="control-btn volume-btn" id="volume-btn" title="Adjust Volume">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+              <path
+                d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+            </svg>
+          </button>
 
           <button class="control-btn toggle-lyrics-btn" onclick="toggleLyrics()" title="Show Lyrics">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="white" id="chevron-icon">
@@ -66,12 +67,6 @@
             </svg>
           </button>
         </div>
-      </div>
-    </div>
-
-    <div id="volume-slider-container" class="volume-slider-container">
-      <div class="volume-track-vertical">
-        <input type="range" id="volume-range" min="0" max="100" value="50" step="2">
       </div>
     </div>
 
@@ -85,7 +80,7 @@
   </div>
 
   <script>
-    const { ipcRenderer, clipboard } = require('electron');
+    const { ipcRenderer } = require('electron');
 
     // 1. GAME LOOP VARIABLES
     let localProgress = 0;
@@ -165,7 +160,7 @@
         updateVisuals();
       }
 
-      syncLyrics(); // Sync lyrics every frame
+      syncLyrics();
       requestAnimationFrame(animateProgressBar);
     }
 
@@ -181,20 +176,7 @@
       }
     }
 
-    // 6. QUICK SHARE
-    function shareTrack() {
-      const title = document.getElementById('track-title').innerText;
-      const artist = document.getElementById('artist-name').innerText;
-      if (title !== "Waiting for Media..." && title !== "Waiting for Spotify...") {
-        clipboard.writeText(`🎵 Vibing to: ${title} - ${artist}`);
-        const shareBtn = document.querySelector('.share-btn');
-        const originalIcon = shareBtn.innerHTML;
-        shareBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#1DB954"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
-        setTimeout(() => { shareBtn.innerHTML = originalIcon; }, 1500);
-      }
-    }
-
-    // 7. THE LYRICS ENGINE
+    // 6. THE LYRICS ENGINE
     let currentLyrics = [];
     let activeLyricIndex = -1;
     let loadedTrackId = "";
@@ -314,46 +296,62 @@
       }
     }
 
-    // 8. INTERACTIVE HORIZONTAL VOLUME SIDE-SLIDER HANDLER
+    // 7. CUSTOM HIGH-ACCESSIBILITY VOLUME CAPSULE MECHANICS
     const volumeBtn = document.getElementById('volume-btn');
-    const volumeWrapper = document.getElementById('volume-wrapper');
-    const volumeSliderContainer = document.getElementById('volume-slider-container');
+    const volumePopup = document.getElementById('volume-popup-capsule');
+    const trackElement = document.getElementById('custom-volume-track');
+    const fillElement = document.getElementById('custom-volume-fill');
+    const thumbElement = document.getElementById('custom-volume-thumb');
 
-    if (volumeBtn && volumeSliderContainer) {
-      volumeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
+    let isDrawerOpen = false;
+    let isDraggingVolume = false;
+    let volumeLevel = 50;
 
-        const currentLeftEdge = window.screenX;
-        const totalScreenWidth = window.screen.availWidth;
-        const widgetWidth = window.outerWidth;
-        const spaceOnRight = totalScreenWidth - (currentLeftEdge + widgetWidth);
+    volumeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isDrawerOpen = !isDrawerOpen;
 
-        // Adaptive Check: If blocked on right, slide LEFT inside row layout
-        if (spaceOnRight < 100) {
-          volumeWrapper.classList.remove('expand-right');
-          volumeWrapper.classList.add('expand-left');
-        } else {
-          volumeWrapper.classList.remove('expand-left');
-          volumeWrapper.classList.add('expand-right');
-        }
+      ipcRenderer.send('toggle-volume-frame', isDrawerOpen);
+      volumePopup.classList.toggle('show-popup', isDrawerOpen);
+    });
 
-        volumeWrapper.classList.toggle('active');
-      });
+    document.addEventListener('click', (e) => {
+      if (isDrawerOpen && !volumePopup.contains(e.target) && e.target !== volumeBtn) {
+        isDrawerOpen = false;
+        volumePopup.classList.remove('show-popup');
+        ipcRenderer.send('toggle-volume-frame', false);
+      }
+    });
 
-      document.addEventListener('click', (e) => {
-        if (!volumeWrapper.contains(e.target)) {
-          volumeWrapper.classList.remove('active');
-        }
-      });
+    // Core Dragging Engine Math
+    function updateVolumeFromMouse(mouseY) {
+      const rect = trackElement.getBoundingClientRect();
+      // Calculate inverse percentage layout height
+      let percentage = ((rect.bottom - mouseY) / rect.height) * 100;
+      percentage = Math.max(0, Math.min(100, percentage)); // Boundary constraints clamping
 
-      volumeSliderContainer.addEventListener('wheel', (e) => {
-        if (e.deltaY < 0) {
-          ipcRenderer.send('change-volume', 'up');
-        } else {
-          ipcRenderer.send('change-volume', 'down');
-        }
-      });
+      volumeLevel = Math.round(percentage);
+
+      // Update custom DOM visuals instantly
+      fillElement.style.height = `${volumeLevel}%`;
+      thumbElement.style.bottom = `${volumeLevel}%`;
+
+      ipcRenderer.send('change-volume', { mode: 'set', value: volumeLevel });
     }
+
+    trackElement.addEventListener('mousedown', (e) => {
+      isDraggingVolume = true;
+      updateVolumeFromMouse(e.clientY);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDraggingVolume) return;
+      updateVolumeFromMouse(e.clientY);
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDraggingVolume = false;
+    });
   </script>
 </body>
 
