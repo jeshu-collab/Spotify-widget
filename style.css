@@ -5,7 +5,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  /* The most important line: forces padding to stay INSIDE the box */
+  /* Forces padding and borders to stay INSIDE assigned dimensions */
 }
 
 html,
@@ -14,7 +14,6 @@ body {
   height: 100vh;
   overflow: hidden;
   background: transparent;
-  /* THE FIX: Official Spotify Font Stack */
   font-family: "Circular Sp", "Circular Sp-Arab", "Circular Sp-Hebr", "Helvetica Neue", helvetica, arial, sans-serif;
 }
 
@@ -27,7 +26,6 @@ body {
   width: 100vw;
   height: 100vh;
   padding: 18px 20px 8px 20px;
-  /* Reduced bottom padding from 18px to 8px */
   border-radius: 16px;
   background: rgba(30, 30, 30, 0.6);
   backdrop-filter: blur(12px);
@@ -42,7 +40,6 @@ body {
 .main-content {
   display: grid;
   grid-template-columns: 100px 1fr;
-  /* Image is exactly 100px, text takes the rest */
   gap: 15px;
   align-items: center;
   width: 100%;
@@ -66,7 +63,6 @@ body {
   justify-content: center;
   width: 100%;
   min-width: 0;
-  /* Prevents long names from breaking the grid */
 }
 
 #track-title {
@@ -74,7 +70,6 @@ body {
   font-weight: 700;
   color: white;
   margin-bottom: 2px;
-  /* THE FIX: Tightened from 4px */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -84,7 +79,6 @@ body {
   font-size: 13px;
   color: #b3b3b3;
   margin-bottom: 8px;
-  /* THE FIX: Tightened from 10px */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -99,7 +93,6 @@ body {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 2px;
   margin-bottom: 6px;
-  /* THE FIX: Tightened slightly */
   -webkit-app-region: no-drag;
 }
 
@@ -118,16 +111,19 @@ body {
   font-weight: 500;
   color: rgba(255, 255, 255, 0.5);
   margin-bottom: 4px;
-  /* THE FIX: Tightened from 8px */
 }
 
 /* =========================================
-   6. CONTROLS
+   6. DECONGESTED CONTROLS ROW
    ========================================= */
 .controls-container {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 16px;
+  /* Expanded button gap spacing */
+  margin-top: 10px;
+  position: relative;
   width: 100%;
 }
 
@@ -145,7 +141,6 @@ body {
   transition: all 0.2s ease;
   opacity: 0.8;
   -webkit-app-region: no-drag;
-  /* Protects buttons from drag so they click! */
 }
 
 .control-btn:hover {
@@ -155,7 +150,7 @@ body {
 
 .share-btn {
   margin-left: auto;
-  /* Pushes share and lyrics arrows to the right */
+  /* Pushes the utility group cleanly rightward */
 }
 
 .toggle-lyrics-btn {
@@ -167,10 +162,69 @@ body {
 }
 
 /* =========================================
-   7. LYRICS DRAWER (Phase 1)
+   7. HORIZONTAL INLINE VOLUME SLIDER
    ========================================= */
+.volume-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.volume-slider-container {
+  width: 0px;
+  opacity: 0;
+  overflow: hidden;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+/* Active Class: Controls layout roll-out transitions */
+.volume-wrapper.active .volume-slider-container {
+  width: 80px;
+  opacity: 1;
+  margin: 0 8px;
+}
+
+/* Direction Adjustment Rules */
+.volume-wrapper.expand-right {
+  flex-direction: row;
+}
+
+.volume-wrapper.expand-left {
+  flex-direction: row-reverse;
+}
+
+/* Custom Input Track Styling */
+.volume-slider-container input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.volume-slider-container input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1DB954;
+  /* Spotify Green */
+  transition: transform 0.1s ease;
+}
+
+.volume-slider-container input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.3);
+}
+
 /* =========================================
-   7. LIVE LYRICS (Spotify Style)
+   8. LIVE LYRICS (Spotify Style)
    ========================================= */
 .lyrics-drawer {
   width: 100%;
@@ -185,7 +239,6 @@ body {
 
 .lyrics-drawer.expanded {
   height: 150px;
-  /* Fills the bottom half of the 300px window */
   opacity: 1;
   margin-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -196,7 +249,6 @@ body {
   height: 100%;
   overflow: hidden;
   position: relative;
-  /* Creates the fading effect at the top and bottom of the scrolling text */
   mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
 }
@@ -205,7 +257,6 @@ body {
   width: 100%;
   text-align: center;
   transition: transform 0.4s ease-out;
-  /* Buttery smooth scrolling */
   padding: 60px 10px;
 }
 
@@ -213,7 +264,6 @@ body {
   font-size: 16px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.3);
-  /* Dimmed past/future lyrics */
   margin: 12px 0;
   transition: all 0.3s ease;
   line-height: 1.4;
@@ -222,9 +272,7 @@ body {
 
 .lyric-line.active {
   color: #ffffff;
-  /* Brilliant white for the current lyric */
   font-size: 18px;
-  /* Slightly larger like Spotify */
   transform: scale(1.05);
 }
 
@@ -237,65 +285,4 @@ body {
   font-size: 13px;
   margin-bottom: 8px;
   text-align: center;
-}
-
-/* --- ADAPTIVE VOLUME SIDE CARDRAIL --- */
-.volume-slider-container {
-  position: absolute;
-  top: 10px;
-  width: 45px;
-  height: 120px;
-  background: rgba(20, 20, 20, 0.95);
-  /* Slightly darker to pop out over backgrounds */
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  opacity: 0;
-  pointer-events: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-  z-index: 9999;
-  /* Forces it above all other panels */
-}
-
-/* Make it fully interactive when triggered */
-.volume-slider-container.active {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Slide Right: Positions it exactly inside the newly widened 60px frame space on the right */
-.volume-slider-container.slide-right {
-  right: 5px;
-  /* Locks it to the right edge of the newly expanded window */
-  transform: translateX(-10px);
-}
-
-.volume-slider-container.slide-right.active {
-  transform: translateX(0);
-}
-
-/* Slide Left: Positions it exactly inside the newly widened 60px frame space on the left */
-.volume-slider-container.slide-left {
-  left: 5px;
-  /* Locks it to the left edge of the newly shifted window window */
-  transform: translateX(10px);
-}
-
-.volume-slider-container.slide-left.active {
-  transform: translateX(0);
-}
-
-/* Vertical orientation helper for range inputs */
-.volume-track-vertical input[type="range"] {
-  writing-mode: bt-lr;
-  appearance: slider-vertical;
-  width: 8px;
-  height: 90px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  outline: none;
-  cursor: pointer;
 }

@@ -47,19 +47,24 @@
               <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
             </svg>
           </button>
+
+          <div id="volume-wrapper" class="volume-wrapper">
+            <button class="control-btn volume-btn" id="volume-btn" title="Adjust Volume">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+                <path
+                  d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+              </svg>
+            </button>
+            <div id="volume-slider-container" class="volume-slider-container">
+              <input type="range" id="volume-range" min="0" max="100" value="50" step="2">
+            </div>
+          </div>
+
           <button class="control-btn share-btn" onclick="shareTrack()" title="Copy to Clipboard">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
               <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
             </svg>
           </button>
-
-          <button class="control-btn volume-btn" id="volume-btn" title="Adjust Volume">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-              <path
-                d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-            </svg>
-          </button>
-
           <button class="control-btn toggle-lyrics-btn" onclick="toggleLyrics()" title="Show Lyrics">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="white" id="chevron-icon">
               <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z" />
@@ -314,44 +319,38 @@
       }
     }
 
-    // 8. INTERACTIVE ADAPTIVE VOLUME SLIDER HANDLER
+    // 8. INTERACTIVE HORIZONTAL VOLUME SIDE-SLIDER HANDLER
     const volumeBtn = document.getElementById('volume-btn');
+    const volumeWrapper = document.getElementById('volume-wrapper');
     const volumeSliderContainer = document.getElementById('volume-slider-container');
 
     if (volumeBtn && volumeSliderContainer) {
-      volumeBtn.addEventListener('click', () => {
+      volumeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+
         const currentLeftEdge = window.screenX;
         const totalScreenWidth = window.screen.availWidth;
         const widgetWidth = window.outerWidth;
-
         const spaceOnRight = totalScreenWidth - (currentLeftEdge + widgetWidth);
-        let slideDirection = 'right';
 
-        // 1. Calculate and clear old direction classes
-        if (spaceOnRight < 120) {
-          slideDirection = 'left';
-          volumeSliderContainer.classList.remove('slide-right');
-          volumeSliderContainer.classList.add('slide-left');
+        // Adaptive Check: If blocked on right, slide LEFT inside row layout
+        if (spaceOnRight < 100) {
+          volumeWrapper.classList.remove('expand-right');
+          volumeWrapper.classList.add('expand-left');
         } else {
-          slideDirection = 'right';
-          volumeSliderContainer.classList.remove('slide-left');
-          volumeSliderContainer.classList.add('slide-right');
+          volumeWrapper.classList.remove('expand-left');
+          volumeWrapper.classList.add('expand-right');
         }
 
-        // 2. Toggle active state check
-        const isOpening = !volumeSliderContainer.classList.contains('active');
+        volumeWrapper.classList.toggle('active');
+      });
 
-        // 3. Ping main process to expand the window frame canvas BEFORE showing elements
-        ipcRenderer.send('resize-volume-window', { isExpanding: isOpening, slideDirection: slideDirection });
-
-        if (isOpening) {
-          volumeSliderContainer.classList.add('active');
-        } else {
-          volumeSliderContainer.classList.remove('active');
+      document.addEventListener('click', (e) => {
+        if (!volumeWrapper.contains(e.target)) {
+          volumeWrapper.classList.remove('active');
         }
       });
 
-      // Wheel listener over the slider container sends steps up or down
       volumeSliderContainer.addEventListener('wheel', (e) => {
         if (e.deltaY < 0) {
           ipcRenderer.send('change-volume', 'up');
