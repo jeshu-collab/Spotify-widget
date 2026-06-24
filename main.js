@@ -55,6 +55,64 @@ ipcMain.on('toggle-lyrics-window', (event, isExpanding) => {
   }
 });
 
+// --- SYSTEM VOLUME CONTROLLER & RESIZER ---
+ipcMain.on('resize-volume-window', (event, { isExpanding, slideDirection }) => {
+  if (!widget) return;
+
+  const currentBounds = widget.getBounds();
+  const extraSpace = 60; // Space needed to render the slider panel completely
+
+  if (isExpanding) {
+    // Expand max limit first so the bounds setter isn't choked
+    widget.setMaximumSize(560, currentBounds.height);
+
+    if (slideDirection === 'left') {
+      // Shift window position left by 60px so it expands outward on the left side
+      widget.setBounds({
+        x: currentBounds.x - extraSpace,
+        width: currentBounds.width + extraSpace,
+        y: currentBounds.y,
+        height: currentBounds.height
+      });
+    } else {
+      // Expand right naturally
+      widget.setBounds({
+        x: currentBounds.x,
+        width: currentBounds.width + extraSpace,
+        y: currentBounds.y,
+        height: currentBounds.height
+      });
+    }
+  } else {
+    // Shrinking: Reset width back down, shifting back if it was left-aligned
+    if (slideDirection === 'left') {
+      widget.setBounds({
+        x: currentBounds.x + extraSpace,
+        width: currentBounds.width - extraSpace,
+        y: currentBounds.y,
+        height: currentBounds.height
+      });
+    } else {
+      widget.setBounds({
+        x: currentBounds.x,
+        width: currentBounds.width - extraSpace,
+        y: currentBounds.y,
+        height: currentBounds.height
+      });
+    }
+    widget.setMaximumSize(500, currentBounds.height);
+  }
+});
+
+ipcMain.on('change-volume', (event, direction) => {
+  const volumeAction = direction === 'up'
+    ? '(New-Object -ComObject Wscript.Shell).SendKeys([char]175)'
+    : '(New-Object -ComObject Wscript.Shell).SendKeys([char]174)';
+
+  exec(`powershell -NoProfile -Command "${volumeAction}"`, (error) => {
+    if (error) console.error("Volume adjustment failed:", error);
+  });
+});
 // --- ELECTRON WINDOW & SYSTEM TRAY ---
 function createWidget() {
   widget = new BrowserWindow({
@@ -135,4 +193,4 @@ app.whenReady().then(createWidget);
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
-});
+});;

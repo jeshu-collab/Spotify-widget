@@ -4,10 +4,12 @@
 * {
   margin: 0;
   padding: 0;
-  box-sizing: border-box; /* The most important line: forces padding to stay INSIDE the box */
+  box-sizing: border-box;
+  /* The most important line: forces padding to stay INSIDE the box */
 }
 
-html, body {
+html,
+body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -15,6 +17,7 @@ html, body {
   /* THE FIX: Official Spotify Font Stack */
   font-family: "Circular Sp", "Circular Sp-Arab", "Circular Sp-Hebr", "Helvetica Neue", helvetica, arial, sans-serif;
 }
+
 /* =========================================
    2. THE FLUID GLASS WINDOW
    ========================================= */
@@ -23,13 +26,14 @@ html, body {
   flex-direction: column;
   width: 100vw;
   height: 100vh;
-  padding: 18px 20px 8px 20px; /* Reduced bottom padding from 18px to 8px */
+  padding: 18px 20px 8px 20px;
+  /* Reduced bottom padding from 18px to 8px */
   border-radius: 16px;
   background: rgba(30, 30, 30, 0.6);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  -webkit-app-region: drag; 
-  overflow: hidden; 
+  -webkit-app-region: drag;
+  overflow: hidden;
 }
 
 /* =========================================
@@ -37,7 +41,8 @@ html, body {
    ========================================= */
 .main-content {
   display: grid;
-  grid-template-columns: 100px 1fr; /* Image is exactly 100px, text takes the rest */
+  grid-template-columns: 100px 1fr;
+  /* Image is exactly 100px, text takes the rest */
   gap: 15px;
   align-items: center;
   width: 100%;
@@ -48,8 +53,8 @@ html, body {
   height: 100px;
   object-fit: cover;
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  -webkit-app-region: no-drag; 
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  -webkit-app-region: no-drag;
 }
 
 /* =========================================
@@ -60,23 +65,26 @@ html, body {
   flex-direction: column;
   justify-content: center;
   width: 100%;
-  min-width: 0; /* Prevents long names from breaking the grid */
+  min-width: 0;
+  /* Prevents long names from breaking the grid */
 }
 
 #track-title {
   font-size: 16px;
   font-weight: 700;
   color: white;
-  margin-bottom: 2px; /* THE FIX: Tightened from 4px */
+  margin-bottom: 2px;
+  /* THE FIX: Tightened from 4px */
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis; 
+  text-overflow: ellipsis;
 }
 
 #artist-name {
   font-size: 13px;
   color: #b3b3b3;
-  margin-bottom: 8px; /* THE FIX: Tightened from 10px */
+  margin-bottom: 8px;
+  /* THE FIX: Tightened from 10px */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -90,7 +98,8 @@ html, body {
   height: 4px;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 2px;
-  margin-bottom: 6px; /* THE FIX: Tightened slightly */
+  margin-bottom: 6px;
+  /* THE FIX: Tightened slightly */
   -webkit-app-region: no-drag;
 }
 
@@ -108,7 +117,8 @@ html, body {
   font-size: 11px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.5);
-  margin-bottom: 4px; /* THE FIX: Tightened from 8px */
+  margin-bottom: 4px;
+  /* THE FIX: Tightened from 8px */
 }
 
 /* =========================================
@@ -134,7 +144,8 @@ html, body {
   cursor: pointer;
   transition: all 0.2s ease;
   opacity: 0.8;
-  -webkit-app-region: no-drag; /* Protects buttons from drag so they click! */
+  -webkit-app-region: no-drag;
+  /* Protects buttons from drag so they click! */
 }
 
 .control-btn:hover {
@@ -143,12 +154,14 @@ html, body {
 }
 
 .share-btn {
-  margin-left: auto; /* Pushes share and lyrics arrows to the right */
+  margin-left: auto;
+  /* Pushes share and lyrics arrows to the right */
 }
 
 .toggle-lyrics-btn {
   transition: transform 0.3s ease;
 }
+
 .toggle-lyrics-btn.open svg {
   transform: rotate(180deg);
 }
@@ -171,7 +184,8 @@ html, body {
 }
 
 .lyrics-drawer.expanded {
-  height: 150px; /* Fills the bottom half of the 300px window */
+  height: 150px;
+  /* Fills the bottom half of the 300px window */
   opacity: 1;
   margin-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -190,14 +204,16 @@ html, body {
 #lyrics-content {
   width: 100%;
   text-align: center;
-  transition: transform 0.4s ease-out; /* Buttery smooth scrolling */
-  padding: 60px 10px; 
+  transition: transform 0.4s ease-out;
+  /* Buttery smooth scrolling */
+  padding: 60px 10px;
 }
 
 .lyric-line {
   font-size: 16px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.3); /* Dimmed past/future lyrics */
+  color: rgba(255, 255, 255, 0.3);
+  /* Dimmed past/future lyrics */
   margin: 12px 0;
   transition: all 0.3s ease;
   line-height: 1.4;
@@ -205,10 +221,13 @@ html, body {
 }
 
 .lyric-line.active {
-  color: #ffffff; /* Brilliant white for the current lyric */
-  font-size: 18px; /* Slightly larger like Spotify */
+  color: #ffffff;
+  /* Brilliant white for the current lyric */
+  font-size: 18px;
+  /* Slightly larger like Spotify */
   transform: scale(1.05);
 }
+
 .hidden {
   display: none !important;
 }
@@ -218,4 +237,62 @@ html, body {
   font-size: 13px;
   margin-bottom: 8px;
   text-align: center;
+}
+
+/* --- ADAPTIVE VOLUME SIDE CARDRAIL --- */
+.volume-slider-container {
+  position: absolute;
+  top: 10px;
+  width: 45px;
+  height: 120px;
+  background: rgba(20, 20, 20, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  z-index: 999;
+}
+
+/* Make it clickable and visible when active */
+.volume-slider-container.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Slide Right Style Rule */
+.volume-slider-container.slide-right {
+  left: 100%;
+  transform: translateX(-10px) scale(0.9);
+}
+
+.volume-slider-container.slide-right.active {
+  transform: translateX(10px) scale(1);
+}
+
+/* Slide Left Style Rule */
+.volume-slider-container.slide-left {
+  right: 100%;
+  transform: translateX(10px) scale(0.9);
+}
+
+.volume-slider-container.slide-left.active {
+  transform: translateX(-10px) scale(1);
+}
+
+/* Vertical orientation helper for range inputs */
+.volume-track-vertical input[type="range"] {
+  writing-mode: bt-lr;
+  /* IE */
+  appearance: slider-vertical;
+  /* Webkit standard */
+  width: 8px;
+  height: 90px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  outline: none;
 }
