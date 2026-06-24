@@ -71,7 +71,7 @@ ipcMain.on('change-volume', (event, direction) => {
 
 function createWidget() {
   widget = new BrowserWindow({
-    width: 300,
+    width: 350,
     height: 140,
     frame: false,
     transparent: true,

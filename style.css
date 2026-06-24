@@ -114,15 +114,15 @@ body {
 }
 
 /* =========================================
-   6. DECONGESTED CONTROLS ROW
+   6. PERFECTLY SPACED CONTROLS ROW
    ========================================= */
 .controls-container {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  /* Expanded button gap spacing */
-  margin-top: 10px;
+  justify-content: flex-start;
+  gap: 20px;
+  /* Enhanced luxury spacing */
+  margin-top: 12px;
   position: relative;
   width: 100%;
 }
@@ -148,12 +148,9 @@ body {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.share-btn {
-  margin-left: auto;
-  /* Pushes the utility group cleanly rightward */
-}
-
+/* THE FIX: Automatically anchors the lyrics toggle icon directly to the right border wall */
 .toggle-lyrics-btn {
+  margin-left: auto;
   transition: transform 0.3s ease;
 }
 
@@ -168,7 +165,6 @@ body {
   display: flex;
   align-items: center;
   position: relative;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .volume-slider-container {
@@ -180,14 +176,14 @@ body {
   align-items: center;
 }
 
-/* Active Class: Controls layout roll-out transitions */
+/* Active Extension: Slide layout track outward neatly */
 .volume-wrapper.active .volume-slider-container {
-  width: 80px;
+  width: 85px;
+  /* Fits elegantly inside the extra 50px frame width */
   opacity: 1;
-  margin: 0 8px;
+  margin: 0 6px;
 }
 
-/* Direction Adjustment Rules */
 .volume-wrapper.expand-right {
   flex-direction: row;
 }
@@ -196,7 +192,6 @@ body {
   flex-direction: row-reverse;
 }
 
-/* Custom Input Track Styling */
 .volume-slider-container input[type="range"] {
   appearance: none;
   -webkit-appearance: none;
@@ -215,12 +210,7 @@ body {
   height: 10px;
   border-radius: 50%;
   background: #1DB954;
-  /* Spotify Green */
   transition: transform 0.1s ease;
-}
-
-.volume-slider-container input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.3);
 }
 
 /* =========================================
