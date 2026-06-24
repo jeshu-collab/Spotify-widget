@@ -245,54 +245,57 @@ body {
   top: 10px;
   width: 45px;
   height: 120px;
-  background: rgba(20, 20, 20, 0.85);
+  background: rgba(20, 20, 20, 0.95);
+  /* Slightly darker to pop out over backgrounds */
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   opacity: 0;
   pointer-events: none;
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
-  z-index: 999;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  z-index: 9999;
+  /* Forces it above all other panels */
 }
 
-/* Make it clickable and visible when active */
+/* Make it fully interactive when triggered */
 .volume-slider-container.active {
   opacity: 1;
   pointer-events: auto;
 }
 
-/* Slide Right Style Rule */
+/* Slide Right: Positions it exactly inside the newly widened 60px frame space on the right */
 .volume-slider-container.slide-right {
-  left: 100%;
-  transform: translateX(-10px) scale(0.9);
+  right: 5px;
+  /* Locks it to the right edge of the newly expanded window */
+  transform: translateX(-10px);
 }
 
 .volume-slider-container.slide-right.active {
-  transform: translateX(10px) scale(1);
+  transform: translateX(0);
 }
 
-/* Slide Left Style Rule */
+/* Slide Left: Positions it exactly inside the newly widened 60px frame space on the left */
 .volume-slider-container.slide-left {
-  right: 100%;
-  transform: translateX(10px) scale(0.9);
+  left: 5px;
+  /* Locks it to the left edge of the newly shifted window window */
+  transform: translateX(10px);
 }
 
 .volume-slider-container.slide-left.active {
-  transform: translateX(-10px) scale(1);
+  transform: translateX(0);
 }
 
 /* Vertical orientation helper for range inputs */
 .volume-track-vertical input[type="range"] {
   writing-mode: bt-lr;
-  /* IE */
   appearance: slider-vertical;
-  /* Webkit standard */
   width: 8px;
   height: 90px;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 4px;
   outline: none;
+  cursor: pointer;
 }
