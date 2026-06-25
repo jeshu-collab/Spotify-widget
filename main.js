@@ -33,15 +33,24 @@ ipcMain.on('media-command', (event, command) => {
   runVbsCommand(command);
 });
 
-// --- ACCURATE NATIVE AUDIO INCREMENT CONVERTER ---
-ipcMain.on('change-volume', (event, data) => {
-  if (!data || data.value === undefined) return;
-  if (data.value === internalSavedVol) return;
+// --- BLAZING FAST NATIVE VOLUME ROUTER ---
 
-  const stepAction = data.value > internalSavedVol ? 'volUp' : 'volDown';
+ipcMain.on('change-volume', (event, data) => {
+  if (!data || data.value === undefined || data.value === internalSavedVol) return;
+
+  // Calculate the difference so we can jump multiple steps instantly without lagging
+  const diff = data.value - internalSavedVol;
+  const steps = Math.max(1, Math.round(Math.abs(diff) / 2)); // 1 step = ~2% system volume
+  const directionKey = diff > 0 ? '175' : '174'; // 175 = VolUp, 174 = VolDown
+
   internalSavedVol = data.value;
 
-  runVbsCommand(stepAction);
+  // Bypasses your VBScript entirely and executes multiple volume steps in ONE microsecond loop
+  const psCommand = `powershell -WindowStyle Hidden -NoProfile -Command "$wshell = New-Object -ComObject WScript.Shell; 1..${steps} | ForEach-Object { $wshell.SendKeys([char]${directionKey}) }"`;
+
+  exec(psCommand, (error) => {
+    if (error) console.error("Volume Step Error:", error);
+  });
 });
 
 // --- RESIZING LIFECYCLE MANAGEMENT LOOP ---

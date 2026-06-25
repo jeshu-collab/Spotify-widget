@@ -159,9 +159,35 @@
       }
     });
 
+    let throttleTimer = false;
+
+    // Throttled slider ensures your PC never lags or freezes while dragging
     volumeRange.addEventListener('input', (e) => {
-      const currentValue = parseInt(e.target.value, 10);
-      ipcRenderer.send('change-volume', { value: currentValue });
+      if (throttleTimer) return;
+      throttleTimer = true;
+
+      setTimeout(() => {
+        const currentValue = parseInt(volumeRange.value, 10);
+        ipcRenderer.send('change-volume', { value: currentValue });
+        throttleTimer = false;
+      }, 75); // 75ms delay makes dragging buttery smooth
+    });
+
+    // Throttled scroll wheel support
+    volumePopup.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (throttleTimer) return;
+      throttleTimer = true;
+
+      let currentValue = parseInt(volumeRange.value, 10);
+      currentValue = e.deltaY < 0 ? Math.min(100, currentValue + 4) : Math.max(0, currentValue - 4);
+
+      volumeRange.value = currentValue;
+
+      setTimeout(() => {
+        ipcRenderer.send('change-volume', { value: currentValue });
+        throttleTimer = false;
+      }, 50);
     });
 
     volumePopup.addEventListener('wheel', (e) => {
