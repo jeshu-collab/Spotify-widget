@@ -137,16 +137,30 @@
       }
     }
 
-    // 7. LIGHTWEIGHT NATIVE DRAG CONTROLLER
+    // 7. TRUE ANDROID NATIVE VOLUME CONTROLLER
     const volumeBtn = document.getElementById('volume-btn');
     const volumePopup = document.getElementById('volume-popup-capsule');
     const volumeRange = document.getElementById('volume-range');
 
     let isDrawerOpen = false;
 
+    // THE FIX: Stops drags and clicks from bubbling up and breaking the UI!
+    volumePopup.addEventListener('mousedown', (e) => e.stopPropagation());
+    volumePopup.addEventListener('click', (e) => e.stopPropagation());
+
+    // Fetch the ACTUAL PC Volume when the widget loads
+    ipcRenderer.invoke('get-system-volume').then((actualVolume) => {
+      volumeRange.value = actualVolume;
+    });
+
     volumeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       isDrawerOpen = !isDrawerOpen;
+
+      // SYNC EXACT VOLUME right as the drawer opens, just like a phone!
+      if (isDrawerOpen) {
+        ipcRenderer.invoke('get-system-volume').then((vol) => volumeRange.value = vol);
+      }
 
       volumePopup.classList.toggle('show-popup', isDrawerOpen);
     });
@@ -155,48 +169,33 @@
       if (isDrawerOpen && !volumePopup.contains(e.target) && e.target !== volumeBtn) {
         isDrawerOpen = false;
         volumePopup.classList.remove('show-popup');
-
       }
     });
 
-    let throttleTimer = false;
-
-    // Throttled slider ensures your PC never lags or freezes while dragging
+    // Smooth real-time dragging mapped perfectly to absolute percentages
+    let throttle = false;
     volumeRange.addEventListener('input', (e) => {
-      if (throttleTimer) return;
-      throttleTimer = true;
-
-      setTimeout(() => {
-        const currentValue = parseInt(volumeRange.value, 10);
-        ipcRenderer.send('change-volume', { value: currentValue });
-        throttleTimer = false;
-      }, 75); // 75ms delay makes dragging buttery smooth
+      if (throttle) return;
+      throttle = true;
+      const currentValue = parseInt(e.target.value, 10);
+      ipcRenderer.send('change-volume', { value: currentValue });
+      setTimeout(() => throttle = false, 40);
     });
 
-    // Throttled scroll wheel support
+    // Scroll wheel mapped exactly to percentages
+    let wheelThrottle = false;
     volumePopup.addEventListener('wheel', (e) => {
       e.preventDefault();
-      if (throttleTimer) return;
-      throttleTimer = true;
+      if (wheelThrottle) return;
+      wheelThrottle = true;
 
-      let currentValue = parseInt(volumeRange.value, 10);
-      currentValue = e.deltaY < 0 ? Math.min(100, currentValue + 4) : Math.max(0, currentValue - 4);
-
-      volumeRange.value = currentValue;
-
-      setTimeout(() => {
-        ipcRenderer.send('change-volume', { value: currentValue });
-        throttleTimer = false;
-      }, 50);
-    });
-
-    volumePopup.addEventListener('wheel', (e) => {
-      e.preventDefault();
       let currentValue = parseInt(volumeRange.value, 10);
       currentValue = e.deltaY < 0 ? Math.min(100, currentValue + 4) : Math.max(0, currentValue - 4);
 
       volumeRange.value = currentValue;
       ipcRenderer.send('change-volume', { value: currentValue });
+
+      setTimeout(() => wheelThrottle = false, 50);
     });
 
     // --- LYRICS HANDLING ENGINE CODE ---

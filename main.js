@@ -1,3 +1,4 @@
+const loudness = require('loudness');
 const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const { Worker } = require('worker_threads');
 const path = require('path');
@@ -33,26 +34,26 @@ ipcMain.on('media-command', (event, command) => {
   runVbsCommand(command);
 });
 
-// --- BLAZING FAST NATIVE VOLUME ROUTER ---
+// --- TRUE ANDROID SYSTEM VOLUME ENGINE ---
 
-ipcMain.on('change-volume', (event, data) => {
-  if (!data || data.value === undefined || data.value === internalSavedVol) return;
-
-  // Calculate the difference so we can jump multiple steps instantly without lagging
-  const diff = data.value - internalSavedVol;
-  const steps = Math.max(1, Math.round(Math.abs(diff) / 2)); // 1 step = ~2% system volume
-  const directionKey = diff > 0 ? '175' : '174'; // 175 = VolUp, 174 = VolDown
-
-  internalSavedVol = data.value;
-
-  // Bypasses your VBScript entirely and executes multiple volume steps in ONE microsecond loop
-  const psCommand = `powershell -WindowStyle Hidden -NoProfile -Command "$wshell = New-Object -ComObject WScript.Shell; 1..${steps} | ForEach-Object { $wshell.SendKeys([char]${directionKey}) }"`;
-
-  exec(psCommand, (error) => {
-    if (error) console.error("Volume Step Error:", error);
-  });
+// 1. Fetches the exact PC volume when requested
+ipcMain.handle('get-system-volume', async () => {
+  try {
+    return await loudness.getVolume();
+  } catch (err) {
+    return 50; // Fallback
+  }
 });
 
+// 2. Sets the exact absolute percentage instantly without lag
+ipcMain.on('change-volume', async (event, data) => {
+  if (!data || data.value === undefined) return;
+  try {
+    await loudness.setVolume(data.value);
+  } catch (error) {
+    console.error("Native Volume Error:", error);
+  }
+});
 // --- RESIZING LIFECYCLE MANAGEMENT LOOP ---
 ipcMain.on('toggle-volume-frame', (event, isExpanding) => {
   if (!widget) return;

@@ -12,7 +12,8 @@
     "electron-builder": "^26.15.3"
   },
   "dependencies": {
-    "@coooookies/windows-smtc-monitor": "^1.0.12"
+    "@coooookies/windows-smtc-monitor": "^1.0.12",
+    "loudness": "^0.4.2"
   },
   "build": {
     "appId": "com.spotify.glasswidget",
