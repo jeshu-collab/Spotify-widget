@@ -167,116 +167,80 @@ body {
 }
 
 /* =========================================
-   7. ANDROID-STYLE VOLUME POPUP OVERLAY
+   7. CLASSIC VERTICAL SLIDER & HITBOX
    ========================================= */
 .volume-popup-capsule {
   position: absolute;
-  right: 15px;
+  left: 315px;
   top: 15px;
   width: 36px;
-  height: 100px;
+  height: 110px;
   background: rgba(20, 20, 20, 0.95);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
 
-  /* THE FIX: Visibility completely removes the native slider from the screen */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-
-  transform: translateX(20px) scale(0.9);
-  /* Added visibility to the transition line so it doesn't instantly vanish */
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease, visibility 0.2s;
+  transform: translateX(-15px) scale(0.9);
+  transition: transform 0.2s ease, opacity 0.2s, visibility 0.2s;
   z-index: 9999;
+  -webkit-app-region: no-drag;
 }
 
-.volume-popup-capsule input[type="range"] {
-  -webkit-appearance: none;
-  /* Strips away the clunky native OS slider */
-  background: transparent;
-  width: 80px;
-  /* This dictates the vertical length after rotation */
-  height: 36px;
-  /* FAT invisible hitbox spanning the entire capsule width */
-  outline: none;
-  cursor: pointer;
-  transform: rotate(-90deg);
-  /* Stands it up vertically */
-}
-
-/* 1. The sleek visible track line */
-.volume-popup-capsule input[type="range"]::-webkit-slider-runnable-track {
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-}
-
-/* 2. The grab handle (Thumb) */
-.volume-popup-capsule input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  height: 16px;
-  width: 16px;
-  border-radius: 50%;
-  background: #ffffff;
-  margin-top: -5px;
-  /* Mathematically centers the 16px thumb on the 6px track */
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  transition: transform 0.1s ease, background 0.2s;
-}
-
-/* 3. Interactive Assist: Pops out and turns green when you touch it */
-.volume-popup-capsule input[type="range"]:active::-webkit-slider-thumb {
-  transform: scale(1.3);
-  background: #1DB954;
-}
-
-/* Activated State */
 .volume-popup-capsule.show-popup {
   opacity: 1;
   visibility: visible;
-  /* Brings it back when opened */
   pointer-events: auto;
   transform: translateX(0) scale(1);
 }
 
-/* HIGH HITBOX TRACK FILL AREA */
-.custom-volume-track,
-.custom-slider-track {
+/* MASSIVE INVISIBLE HITBOX CONTAINER */
+.custom-volume-container {
   position: relative;
-  width: 14px;
-  height: 90px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 7px;
+  width: 100%;
+  /* Spans full 36px width so you can click anywhere */
+  height: 80px;
+  cursor: pointer;
+  touch-action: none;
+  /* Prevents browser dragging bugs */
 }
 
-/* Expands the live click zone to the edges of the capsule box */
-.custom-slider-track::before {
-  content: '';
-  position: absolute;
-  left: -10px;
-  right: -10px;
-  top: -8px;
-  bottom: -8px;
-}
-
-.custom-slider-fill {
+/* 1. The Thin Background Track */
+.custom-volume-track {
   position: absolute;
   bottom: 0;
-  left: 0;
-  width: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  pointer-events: none;
+  /* Clicks pass right through it */
+}
+
+/* 2. The Green Fill */
+.custom-volume-fill {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 50%;
   background: #1DB954;
-  /* Spotify Accent Green */
-  border-radius: 7px;
+  border-radius: 2px;
   pointer-events: none;
 }
 
-.custom-slider-thumb {
+/* 3. The Round Head */
+.custom-volume-thumb {
   position: absolute;
+  bottom: 50%;
   left: 50%;
   transform: translate(-50%, 50%);
   width: 14px;
@@ -284,7 +248,13 @@ body {
   background: #ffffff;
   border-radius: 50%;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  transition: transform 0.1s ease;
   pointer-events: none;
+}
+
+/* Glow effect when you click/hold the bar */
+.custom-volume-container:active .custom-volume-thumb {
+  transform: translate(-50%, 50%) scale(1.3);
 }
 
 /* =========================================

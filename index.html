@@ -13,7 +13,11 @@
   <div class="widget-container" id="main-widget">
 
     <div id="volume-popup-capsule" class="volume-popup-capsule">
-      <input type="range" id="volume-range" min="0" max="100" value="50" step="2">
+      <div id="custom-volume-container" class="custom-volume-container">
+        <div class="custom-volume-track"></div>
+        <div id="custom-volume-fill" class="custom-volume-fill"></div>
+        <div id="custom-volume-thumb" class="custom-volume-thumb"></div>
+      </div>
     </div>
 
     <div class="main-content">
@@ -137,31 +141,37 @@
       }
     }
 
-    // 7. TRUE ANDROID NATIVE VOLUME CONTROLLER
+    // 7. FLAWLESS CUSTOM DRAG & CLICK CONTROLLER
     const volumeBtn = document.getElementById('volume-btn');
     const volumePopup = document.getElementById('volume-popup-capsule');
-    const volumeRange = document.getElementById('volume-range');
+    const volContainer = document.getElementById('custom-volume-container');
+    const volFill = document.getElementById('custom-volume-fill');
+    const volThumb = document.getElementById('custom-volume-thumb');
 
     let isDrawerOpen = false;
+    let isDraggingVol = false;
+    let currentVol = 50;
 
-    // THE FIX: Stops drags and clicks from bubbling up and breaking the UI!
+    // Block accidental UI closing
     volumePopup.addEventListener('mousedown', (e) => e.stopPropagation());
     volumePopup.addEventListener('click', (e) => e.stopPropagation());
 
-    // Fetch the ACTUAL PC Volume when the widget loads
-    ipcRenderer.invoke('get-system-volume').then((actualVolume) => {
-      volumeRange.value = actualVolume;
-    });
+    // Update the visual height of the green bar and head
+    function setVolumeVisuals(percentage) {
+      currentVol = Math.max(0, Math.min(100, percentage));
+      volFill.style.height = `${currentVol}%`;
+      volThumb.style.bottom = `${currentVol}%`;
+    }
+
+    // Sync current PC volume on load
+    ipcRenderer.invoke('get-system-volume').then(vol => setVolumeVisuals(vol));
 
     volumeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       isDrawerOpen = !isDrawerOpen;
-
-      // SYNC EXACT VOLUME right as the drawer opens, just like a phone!
       if (isDrawerOpen) {
-        ipcRenderer.invoke('get-system-volume').then((vol) => volumeRange.value = vol);
+        ipcRenderer.invoke('get-system-volume').then(vol => setVolumeVisuals(vol));
       }
-
       volumePopup.classList.toggle('show-popup', isDrawerOpen);
     });
 
@@ -172,40 +182,54 @@
       }
     });
 
-    // --- SAFE & ACCURATE ANDROID DRAG CONTROLS ---
+    // --- ABSOLUTE DRAG MATH ---
+    // Calculates exact mouse Y position relative to the container boundaries
+    function getVolFromMouse(clientY) {
+      const rect = volContainer.getBoundingClientRect();
+      const clickY = rect.bottom - clientY;
+      return (clickY / rect.height) * 100;
+    }
 
     let volThrottle = false;
-
-    // 1. Updates system volume WHILE dragging (safely spaced out so Windows doesn't freeze)
-    volumeRange.addEventListener('input', (e) => {
+    function dispatchVolume() {
       if (volThrottle) return;
       volThrottle = true;
-
-      const currentValue = parseInt(e.target.value, 10);
-      ipcRenderer.send('change-volume', { value: currentValue });
-
-      // Give Windows 200ms to process the audio change before sending the next one
+      ipcRenderer.send('change-volume', { value: Math.round(currentVol) });
       setTimeout(() => { volThrottle = false; }, 40);
+    }
+
+    // 1. Click anywhere on the bar to instantly snap the volume
+    volContainer.addEventListener('mousedown', (e) => {
+      isDraggingVol = true;
+      setVolumeVisuals(getVolFromMouse(e.clientY));
+      dispatchVolume();
     });
 
-    // 2. Guarantees the absolute exact volume is set the millisecond you let go of the slider
-    volumeRange.addEventListener('change', (e) => {
-      const finalValue = parseInt(e.target.value, 10);
-      ipcRenderer.send('change-volume', { value: finalValue });
+    // 2. Drag the head (or anywhere vertically) smoothly
+    document.addEventListener('mousemove', (e) => {
+      if (!isDraggingVol) return;
+      setVolumeVisuals(getVolFromMouse(e.clientY));
+      dispatchVolume();
     });
 
-    // 3. Scroll wheel support (Safely throttled)
+    // 3. Lock in exact volume when you let go of the mouse
+    document.addEventListener('mouseup', () => {
+      if (isDraggingVol) {
+        isDraggingVol = false;
+        ipcRenderer.send('change-volume', { value: Math.round(currentVol) });
+      }
+    });
+
+    // 4. Scroll wheel functionality
     let wheelThrottle = false;
     volumePopup.addEventListener('wheel', (e) => {
       e.preventDefault();
       if (wheelThrottle) return;
       wheelThrottle = true;
 
-      let currentValue = parseInt(volumeRange.value, 10);
-      currentValue = e.deltaY < 0 ? Math.min(100, currentValue + 4) : Math.max(0, currentValue - 4);
-
-      volumeRange.value = currentValue;
-      ipcRenderer.send('change-volume', { value: currentValue });
+      const direction = e.deltaY < 0 ? 4 : -4;
+      setVolumeVisuals(currentVol + direction);
+      ipcRenderer.send('change-volume', { value: Math.round(currentVol) });
 
       setTimeout(() => { wheelThrottle = false; }, 40);
     });
