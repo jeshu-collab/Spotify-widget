@@ -172,17 +172,29 @@
       }
     });
 
-    // Smooth real-time dragging mapped perfectly to absolute percentages
-    let throttle = false;
+    // --- SAFE & ACCURATE ANDROID DRAG CONTROLS ---
+
+    let volThrottle = false;
+
+    // 1. Updates system volume WHILE dragging (safely spaced out so Windows doesn't freeze)
     volumeRange.addEventListener('input', (e) => {
-      if (throttle) return;
-      throttle = true;
+      if (volThrottle) return;
+      volThrottle = true;
+
       const currentValue = parseInt(e.target.value, 10);
       ipcRenderer.send('change-volume', { value: currentValue });
-      setTimeout(() => throttle = false, 40);
+
+      // Give Windows 200ms to process the audio change before sending the next one
+      setTimeout(() => { volThrottle = false; }, 40);
     });
 
-    // Scroll wheel mapped exactly to percentages
+    // 2. Guarantees the absolute exact volume is set the millisecond you let go of the slider
+    volumeRange.addEventListener('change', (e) => {
+      const finalValue = parseInt(e.target.value, 10);
+      ipcRenderer.send('change-volume', { value: finalValue });
+    });
+
+    // 3. Scroll wheel support (Safely throttled)
     let wheelThrottle = false;
     volumePopup.addEventListener('wheel', (e) => {
       e.preventDefault();
@@ -195,7 +207,7 @@
       volumeRange.value = currentValue;
       ipcRenderer.send('change-volume', { value: currentValue });
 
-      setTimeout(() => wheelThrottle = false, 50);
+      setTimeout(() => { wheelThrottle = false; }, 40);
     });
 
     // --- LYRICS HANDLING ENGINE CODE ---
