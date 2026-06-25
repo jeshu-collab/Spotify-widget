@@ -13,10 +13,7 @@
   <div class="widget-container" id="main-widget">
 
     <div id="volume-popup-capsule" class="volume-popup-capsule">
-      <div class="custom-slider-track" id="custom-volume-track">
-        <div class="custom-slider-fill" id="custom-volume-fill" style="height: 50%;"></div>
-        <div class="custom-slider-thumb" id="custom-volume-thumb" style="bottom: 50%;"></div>
-      </div>
+      <input type="range" id="volume-range" min="0" max="100" value="50" step="2">
     </div>
 
     <div class="main-content">
@@ -140,20 +137,17 @@
       }
     }
 
-    // --- UTILITY DETACHED AUDIO SLIDER HANDLER ---
+    // 7. LIGHTWEIGHT NATIVE DRAG CONTROLLER
     const volumeBtn = document.getElementById('volume-btn');
     const volumePopup = document.getElementById('volume-popup-capsule');
-    const trackElement = document.getElementById('custom-volume-track');
-    const fillElement = document.getElementById('custom-volume-fill');
-    const thumbElement = document.getElementById('custom-volume-thumb');
+    const volumeRange = document.getElementById('volume-range');
 
-    let isDrawerOpen = false, isDraggingVolume = false, volumeVisualLevel = 50, lastMouseY = 0;
-    // CLEANED VOLUME CLICK HANDLER (NO FRAME STRETCHING)
+    let isDrawerOpen = false;
+
     volumeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       isDrawerOpen = !isDrawerOpen;
 
-      // Removed the toggle-volume-frame IPC message completely!
       volumePopup.classList.toggle('show-popup', isDrawerOpen);
     });
 
@@ -161,56 +155,22 @@
       if (isDrawerOpen && !volumePopup.contains(e.target) && e.target !== volumeBtn) {
         isDrawerOpen = false;
         volumePopup.classList.remove('show-popup');
-        // Removed the toggle-volume-frame IPC message completely!
+
       }
     });
 
-    // ULTIMATE EASY SPEED CONTROL MECHANICS
-    function handleVolumeMovement(currentY) {
-      const deltaY = lastMouseY - currentY;
-      if (Math.abs(deltaY) < 3) return; // Sensitivity deadzone threshold filter
-
-      if (deltaY > 0) {
-        volumeVisualLevel = Math.min(100, volumeVisualLevel + 4);
-        ipcRenderer.send('change-volume', 'up');
-      } else {
-        volumeVisualLevel = Math.max(0, volumeVisualLevel - 4);
-        ipcRenderer.send('change-volume', 'down');
-      }
-
-      fillElement.style.height = `${volumeVisualLevel}%`;
-      thumbElement.style.bottom = `${volumeVisualLevel}%`;
-      lastMouseY = currentY;
-    }
-
-    // Capture interaction clicks anywhere inside the capsule bounding target container area
-    volumePopup.addEventListener('mousedown', (e) => {
-      isDraggingVolume = true;
-      lastMouseY = e.clientY;
-      // Handle instant snapping clicks safely
-      const rect = trackElement.getBoundingClientRect();
-      const clickPercent = ((rect.bottom - e.clientY) / rect.height) * 100;
-      const direction = clickPercent > volumeVisualLevel ? 'up' : 'down';
-      volumeVisualLevel = Math.max(0, Math.min(100, Math.round(clickPercent)));
-      fillElement.style.height = `${volumeVisualLevel}%`;
-      thumbElement.style.bottom = `${volumeVisualLevel}%`;
-      ipcRenderer.send('change-volume', direction);
+    volumeRange.addEventListener('input', (e) => {
+      const currentValue = parseInt(e.target.value, 10);
+      ipcRenderer.send('change-volume', { value: currentValue });
     });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!isDraggingVolume) return;
-      handleVolumeMovement(e.clientY);
-    });
-
-    document.addEventListener('mouseup', () => { isDraggingVolume = false; });
 
     volumePopup.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const direction = e.deltaY < 0 ? 'up' : 'down';
-      volumeVisualLevel = direction === 'up' ? Math.min(100, volumeVisualLevel + 4) : Math.max(0, volumeVisualLevel - 4);
-      fillElement.style.height = `${volumeVisualLevel}%`;
-      thumbElement.style.bottom = `${volumeVisualLevel}%`;
-      ipcRenderer.send('change-volume', direction);
+      let currentValue = parseInt(volumeRange.value, 10);
+      currentValue = e.deltaY < 0 ? Math.min(100, currentValue + 4) : Math.max(0, currentValue - 4);
+
+      volumeRange.value = currentValue;
+      ipcRenderer.send('change-volume', { value: currentValue });
     });
 
     // --- LYRICS HANDLING ENGINE CODE ---

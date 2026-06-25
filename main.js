@@ -7,8 +7,8 @@ app.commandLine.appendSwitch('ignore-certificate-errors');
 
 let widget;
 let tray = null;
+let internalSavedVol = 50;
 
-// --- MULTITHREADED ENGINE ---
 function startMediaTracker() {
   const worker = new Worker(path.join(__dirname, 'media-worker.js'));
   worker.on('message', (trackInfo) => {
@@ -19,7 +19,6 @@ function startMediaTracker() {
   });
 }
 
-// --- NATIVE CONTROLS RECEIVER (PLAYBACK & VOLUME) ---
 function runVbsCommand(command) {
   let scriptPath = path.join(__dirname, 'media-keys.vbs');
   if (scriptPath.includes('app.asar')) {
@@ -34,34 +33,51 @@ ipcMain.on('media-command', (event, command) => {
   runVbsCommand(command);
 });
 
-ipcMain.on('change-volume', (event, direction) => {
-  const vbsAction = direction === 'up' ? 'volUp' : 'volDown';
-  runVbsCommand(vbsAction);
+// --- ACCURATE NATIVE AUDIO INCREMENT CONVERTER ---
+ipcMain.on('change-volume', (event, data) => {
+  if (!data || data.value === undefined) return;
+  if (data.value === internalSavedVol) return;
+
+  const stepAction = data.value > internalSavedVol ? 'volUp' : 'volDown';
+  internalSavedVol = data.value;
+
+  runVbsCommand(stepAction);
 });
 
+// --- RESIZING LIFECYCLE MANAGEMENT LOOP ---
+ipcMain.on('toggle-volume-frame', (event, isExpanding) => {
+  if (!widget) return;
+  const bounds = widget.getBounds();
 
+  if (isExpanding) {
+    widget.setMaximumSize(360, 140);
+    widget.setBounds({ width: 360, height: 140, x: bounds.x, y: bounds.y });
+  } else {
+    widget.setBounds({ width: 310, height: 140, x: bounds.x, y: bounds.y });
+    widget.setMaximumSize(310, 140);
+  }
+});
 
 ipcMain.on('toggle-lyrics-window', (event, isExpanding) => {
   if (!widget) return;
   const currentBounds = widget.getBounds();
   if (isExpanding) {
-    widget.setMaximumSize(500, 300);
+    widget.setMaximumSize(360, 300);
     widget.setBounds({ width: currentBounds.width, height: 300 });
-    widget.setMinimumSize(300, 300);
+    widget.setMinimumSize(310, 300);
   } else {
-    widget.setMinimumSize(300, 140);
+    widget.setMinimumSize(310, 140);
     widget.setBounds({ width: currentBounds.width, height: 140 });
-    widget.setMaximumSize(500, 140);
+    widget.setMaximumSize(360, 140);
   }
 });
 
-// --- APP INITIALIZATION ---
 function createWidget() {
   widget = new BrowserWindow({
-    width: 350,
+    width: 360,
     height: 140,
-    minWidth: 350,
-    maxWidth: 350,
+    minWidth: 360,
+    maxWidth: 360,
     minHeight: 140,
     maxHeight: 140,
     frame: false,
@@ -79,7 +95,6 @@ function createWidget() {
   widget.loadFile('index.html');
   startMediaTracker();
 
-  // SYSTEM TRAY SETUP
   const iconPath = path.join(__dirname, 'tray-icon.ico');
   tray = new Tray(iconPath);
   const contextMenu = Menu.buildFromTemplate([
