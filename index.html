@@ -148,11 +148,12 @@
     const thumbElement = document.getElementById('custom-volume-thumb');
 
     let isDrawerOpen = false, isDraggingVolume = false, volumeVisualLevel = 50, lastMouseY = 0;
-
+    // CLEANED VOLUME CLICK HANDLER (NO FRAME STRETCHING)
     volumeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       isDrawerOpen = !isDrawerOpen;
-      ipcRenderer.send('toggle-volume-frame', isDrawerOpen);
+
+      // Removed the toggle-volume-frame IPC message completely!
       volumePopup.classList.toggle('show-popup', isDrawerOpen);
     });
 
@@ -160,7 +161,7 @@
       if (isDrawerOpen && !volumePopup.contains(e.target) && e.target !== volumeBtn) {
         isDrawerOpen = false;
         volumePopup.classList.remove('show-popup');
-        ipcRenderer.send('toggle-volume-frame', false);
+        // Removed the toggle-volume-frame IPC message completely!
       }
     });
 

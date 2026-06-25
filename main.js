@@ -39,17 +39,7 @@ ipcMain.on('change-volume', (event, direction) => {
   runVbsCommand(vbsAction);
 });
 
-// --- DYNAMIC WINDOW RESIZING (LYRICS & VOLUME POPUP) ---
-ipcMain.on('toggle-volume-frame', (event, isExpanding) => {
-  if (!widget) return;
-  const bounds = widget.getBounds();
-  // Temporarily widen window to allow the capsule to render outside the main layout container box
-  if (isExpanding) {
-    widget.setBounds({ width: 450, height: bounds.height, x: bounds.x, y: bounds.y });
-  } else {
-    widget.setBounds({ width: 400, height: bounds.height, x: bounds.x, y: bounds.y });
-  }
-});
+
 
 ipcMain.on('toggle-lyrics-window', (event, isExpanding) => {
   if (!widget) return;
@@ -68,17 +58,17 @@ ipcMain.on('toggle-lyrics-window', (event, isExpanding) => {
 // --- APP INITIALIZATION ---
 function createWidget() {
   widget = new BrowserWindow({
-    width: 400,
+    width: 350,
     height: 140,
-    minWidth: 300,
-    maxWidth: 460,
+    minWidth: 350,
+    maxWidth: 350,
     minHeight: 140,
     maxHeight: 140,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: true,
+    resizable: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,

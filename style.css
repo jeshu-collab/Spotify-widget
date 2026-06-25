@@ -42,8 +42,7 @@ body {
   grid-template-columns: 100px 1fr;
   gap: 15px;
   align-items: center;
-  width: 360px;
-  /* Constrains it cleanly inside the 400px window space */
+  width: 100%;
 }
 
 #album-art {
@@ -120,7 +119,10 @@ body {
 .controls-container {
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: flex-start;
+  gap: 12px;
+  margin-top: 10px;
+  position: relative;
   /* High luxury room layout */
   width: 100%;
 }
@@ -169,25 +171,38 @@ body {
    ========================================= */
 .volume-popup-capsule {
   position: absolute;
-  left: 408px;
-  /* Slides outside the 400px player into the window expansion zone */
+  right: 15px;
+  /* Pins it directly inside the right border of your widget */
   top: 15px;
-  width: 34px;
-  height: 110px;
-  background: rgba(24, 24, 24, 0.95);
-  backdrop-filter: blur(16px);
+  /* Places it vertically aligned above the bottom controls row */
+  width: 36px;
+  height: 100px;
+  background: rgba(20, 20, 20, 0.95);
+  /* High-contrast dark backdrop */
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 16px;
+  border-radius: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-15px) scale(0.9);
+  /* Smooth slide-in animation tracking from the right edge */
+  transform: translateX(20px) scale(0.9);
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease;
-  z-index: 999999;
-  -webkit-app-region: no-drag;
-  padding: 8px 0;
+  z-index: 9999;
+  /* Forces the capsule layer to ride over text/album artwork */
+}
+
+/* Vertical slider customization */
+.volume-popup-capsule input[type="range"] {
+  appearance: slider-vertical;
+  -webkit-appearance: slider-vertical;
+  width: 8px;
+  height: 75px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  outline: none;
   cursor: pointer;
 }
 
