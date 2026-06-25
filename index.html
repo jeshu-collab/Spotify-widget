@@ -53,14 +53,12 @@
               <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
             </svg>
           </button>
-
           <button class="control-btn volume-btn" id="volume-btn" title="Adjust Volume">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
               <path
                 d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
             </svg>
           </button>
-
           <button class="control-btn toggle-lyrics-btn" onclick="toggleLyrics()" title="Show Lyrics">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="white" id="chevron-icon">
               <path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z" />
@@ -72,8 +70,7 @@
 
     <div id="lyrics-drawer" class="lyrics-drawer">
       <div id="live-lyrics-container">
-        <div id="lyrics-content">
-        </div>
+        <div id="lyrics-content"></div>
       </div>
     </div>
 
@@ -82,26 +79,15 @@
   <script>
     const { ipcRenderer } = require('electron');
 
-    // 1. GAME LOOP VARIABLES
-    let localProgress = 0;
-    let currentDuration = 1000;
-    let isPlaying = false;
-    let lastFrameTime = Date.now();
-    let isLyricsOpen = false;
-
-    // Trackers to catch Spotify's lag
-    let currentTrackTitle = "";
-    let lastWindowsProgress = -1;
+    let localProgress = 0, currentDuration = 1000, isPlaying = false, lastFrameTime = Date.now(), isLyricsOpen = false;
+    let currentTrackTitle = "", lastWindowsProgress = -1;
 
     const playIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
     const pauseIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 
-    // 2. HELPER FUNCTIONS
     function formatTime(ms) {
       if (isNaN(ms) || ms <= 0) return "0:00";
-      const totalSeconds = Math.floor(ms / 1000);
-      const minutes = Math.floor(totalSeconds / 60);
-      const seconds = totalSeconds % 60;
+      const totalSeconds = Math.floor(ms / 1000), minutes = Math.floor(totalSeconds / 60), seconds = totalSeconds % 60;
       return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     }
 
@@ -109,208 +95,63 @@
       document.getElementById('current-time').innerText = formatTime(localProgress);
       document.getElementById('total-time').innerText = formatTime(currentDuration);
       let percentage = (localProgress / currentDuration) * 100;
-      if (percentage > 100) percentage = 100;
-      document.getElementById('progress-bar').style.width = percentage + '%';
+      document.getElementById('progress-bar').style.width = Math.min(100, percentage) + '%';
     }
 
-    // 3. RECEIVE DATA FROM WINDOWS (THE IRONCLAD FILTER)
     ipcRenderer.on('update-track', (event, track) => {
       try {
         document.getElementById('track-title').innerText = track.title;
         document.getElementById('artist-name').innerText = track.artist;
         document.getElementById('album-art').src = track.albumArt;
-
-        const btn = document.getElementById('play-pause-btn');
-        btn.innerHTML = track.isPlaying ? pauseIcon : playIcon;
-
+        document.getElementById('play-pause-btn').innerHTML = track.isPlaying ? pauseIcon : playIcon;
         currentDuration = track.duration;
         isPlaying = track.isPlaying;
 
         if (track.progress !== lastWindowsProgress || track.title !== currentTrackTitle) {
-          const drift = Math.abs(track.progress - localProgress);
-
-          if (track.title !== currentTrackTitle || drift > 3000) {
+          if (track.title !== currentTrackTitle || Math.abs(track.progress - localProgress) > 3000) {
             localProgress = track.progress;
-
-            if (track.title !== currentTrackTitle && isLyricsOpen) {
-              setTimeout(() => fetchLyrics(), 500);
-            }
-
+            if (track.title !== currentTrackTitle && isLyricsOpen) setTimeout(() => fetchLyrics(), 500);
             currentTrackTitle = track.title;
           }
           lastWindowsProgress = track.progress;
         }
-
-      } catch (error) {
-        console.error("UI Error:", error);
-      }
+      } catch (error) { console.error(error); }
     });
 
-    // 4. THE 60FPS GAME LOOP
     function animateProgressBar() {
-      const now = Date.now();
-      const deltaTime = now - lastFrameTime;
+      const now = Date.now(), deltaTime = now - lastFrameTime;
       lastFrameTime = now;
-
       if (isPlaying && currentDuration > 0) {
-        localProgress += deltaTime;
-        if (localProgress > currentDuration) localProgress = currentDuration;
+        localProgress = Math.min(currentDuration, localProgress + deltaTime);
         updateVisuals();
       } else if (!isPlaying) {
         updateVisuals();
       }
-
       syncLyrics();
       requestAnimationFrame(animateProgressBar);
     }
-
     animateProgressBar();
 
-    // 5. BUTTON CONTROLS
     function sendCommand(cmd) {
       ipcRenderer.send('media-command', cmd);
       if (cmd === 'toggle') {
-        const btn = document.getElementById('play-pause-btn');
         isPlaying = !isPlaying;
-        btn.innerHTML = isPlaying ? pauseIcon : playIcon;
+        document.getElementById('play-pause-btn').innerHTML = isPlaying ? pauseIcon : playIcon;
       }
     }
 
-    // 6. THE LYRICS ENGINE
-    let currentLyrics = [];
-    let activeLyricIndex = -1;
-    let loadedTrackId = "";
-
-    function toggleLyrics() {
-      const drawer = document.getElementById('lyrics-drawer');
-      const btn = document.querySelector('.toggle-lyrics-btn');
-
-      isLyricsOpen = !isLyricsOpen;
-      ipcRenderer.send('toggle-lyrics-window', isLyricsOpen);
-
-      if (isLyricsOpen) {
-        drawer.classList.add('expanded');
-        btn.classList.add('open');
-        if (loadedTrackId !== currentTrackTitle) {
-          fetchLyrics();
-        }
-      } else {
-        drawer.classList.remove('expanded');
-        btn.classList.remove('open');
-      }
-    }
-
-    async function fetchLyrics() {
-      const title = document.getElementById('track-title').innerText;
-      const artist = document.getElementById('artist-name').innerText;
-
-      if (title === "Waiting for Media...") return;
-
-      const contentDiv = document.getElementById('lyrics-content');
-      contentDiv.innerHTML = '<p class="lyric-line active">Searching for lyrics...</p>';
-      contentDiv.style.transform = `translateY(0px)`;
-
-      try {
-        const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`;
-        const response = await fetch(url);
-
-        if (!response.ok) throw new Error("Not found");
-        const data = await response.json();
-
-        if (data && data.syncedLyrics) {
-          parseLyrics(data.syncedLyrics);
-          loadedTrackId = currentTrackTitle;
-        } else {
-          contentDiv.innerHTML = '<p class="lyric-line active">No synced lyrics available</p>';
-          currentLyrics = [];
-        }
-      } catch (err) {
-        contentDiv.innerHTML = '<p class="lyric-line active">No lyrics found 😔</p>';
-        currentLyrics = [];
-      }
-    }
-
-    function parseLyrics(lrcString) {
-      const lines = lrcString.split('\n');
-      currentLyrics = [];
-      const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/;
-
-      lines.forEach(line => {
-        const match = timeRegex.exec(line);
-        if (match) {
-          const minutes = parseInt(match[1]);
-          const seconds = parseInt(match[2]);
-          let ms = parseInt(match[3]);
-          if (match[3].length === 2) ms *= 10;
-
-          const timeMs = (minutes * 60 * 1000) + (seconds * 1000) + ms;
-          const text = line.replace(timeRegex, '').trim();
-
-          if (text) currentLyrics.push({ time: timeMs, text: text });
-        }
-      });
-      renderLyrics();
-    }
-
-    function renderLyrics() {
-      const contentDiv = document.getElementById('lyrics-content');
-      contentDiv.innerHTML = '';
-
-      currentLyrics.forEach((lyric, index) => {
-        const p = document.createElement('p');
-        p.className = 'lyric-line';
-        p.id = `lyric-${index}`;
-        p.innerText = lyric.text;
-        contentDiv.appendChild(p);
-      });
-      activeLyricIndex = -1;
-    }
-
-    function syncLyrics() {
-      if (!isLyricsOpen || currentLyrics.length === 0) return;
-
-      let newActiveIndex = -1;
-      for (let i = 0; i < currentLyrics.length; i++) {
-        if (localProgress >= currentLyrics[i].time) {
-          newActiveIndex = i;
-        } else {
-          break;
-        }
-      }
-
-      if (newActiveIndex !== activeLyricIndex && newActiveIndex !== -1) {
-        if (activeLyricIndex !== -1) {
-          const oldEl = document.getElementById(`lyric-${activeLyricIndex}`);
-          if (oldEl) oldEl.classList.remove('active');
-        }
-
-        const newEl = document.getElementById(`lyric-${newActiveIndex}`);
-        if (newEl) {
-          newEl.classList.add('active');
-
-          const containerHeight = document.getElementById('live-lyrics-container').clientHeight;
-          const offset = newEl.offsetTop - (containerHeight / 2) + (newEl.clientHeight / 2);
-          document.getElementById('lyrics-content').style.transform = `translateY(-${Math.max(0, offset)}px)`;
-        }
-        activeLyricIndex = newActiveIndex;
-      }
-    }
-
-    // 7. CUSTOM HIGH-ACCESSIBILITY VOLUME CAPSULE MECHANICS
+    // --- UTILITY DETACHED AUDIO SLIDER HANDLER ---
     const volumeBtn = document.getElementById('volume-btn');
     const volumePopup = document.getElementById('volume-popup-capsule');
     const trackElement = document.getElementById('custom-volume-track');
     const fillElement = document.getElementById('custom-volume-fill');
     const thumbElement = document.getElementById('custom-volume-thumb');
 
-    let isDrawerOpen = false;
-    let isDraggingVolume = false;
-    let volumeLevel = 50;
+    let isDrawerOpen = false, isDraggingVolume = false, volumeVisualLevel = 50, lastMouseY = 0;
 
     volumeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       isDrawerOpen = !isDrawerOpen;
-
       ipcRenderer.send('toggle-volume-frame', isDrawerOpen);
       volumePopup.classList.toggle('show-popup', isDrawerOpen);
     });
@@ -323,35 +164,119 @@
       }
     });
 
-    // Core Dragging Engine Math
-    function updateVolumeFromMouse(mouseY) {
-      const rect = trackElement.getBoundingClientRect();
-      // Calculate inverse percentage layout height
-      let percentage = ((rect.bottom - mouseY) / rect.height) * 100;
-      percentage = Math.max(0, Math.min(100, percentage)); // Boundary constraints clamping
+    // ULTIMATE EASY SPEED CONTROL MECHANICS
+    function handleVolumeMovement(currentY) {
+      const deltaY = lastMouseY - currentY;
+      if (Math.abs(deltaY) < 3) return; // Sensitivity deadzone threshold filter
 
-      volumeLevel = Math.round(percentage);
+      if (deltaY > 0) {
+        volumeVisualLevel = Math.min(100, volumeVisualLevel + 4);
+        ipcRenderer.send('change-volume', 'up');
+      } else {
+        volumeVisualLevel = Math.max(0, volumeVisualLevel - 4);
+        ipcRenderer.send('change-volume', 'down');
+      }
 
-      // Update custom DOM visuals instantly
-      fillElement.style.height = `${volumeLevel}%`;
-      thumbElement.style.bottom = `${volumeLevel}%`;
-
-      ipcRenderer.send('change-volume', { mode: 'set', value: volumeLevel });
+      fillElement.style.height = `${volumeVisualLevel}%`;
+      thumbElement.style.bottom = `${volumeVisualLevel}%`;
+      lastMouseY = currentY;
     }
 
-    trackElement.addEventListener('mousedown', (e) => {
+    // Capture interaction clicks anywhere inside the capsule bounding target container area
+    volumePopup.addEventListener('mousedown', (e) => {
       isDraggingVolume = true;
-      updateVolumeFromMouse(e.clientY);
+      lastMouseY = e.clientY;
+      // Handle instant snapping clicks safely
+      const rect = trackElement.getBoundingClientRect();
+      const clickPercent = ((rect.bottom - e.clientY) / rect.height) * 100;
+      const direction = clickPercent > volumeVisualLevel ? 'up' : 'down';
+      volumeVisualLevel = Math.max(0, Math.min(100, Math.round(clickPercent)));
+      fillElement.style.height = `${volumeVisualLevel}%`;
+      thumbElement.style.bottom = `${volumeVisualLevel}%`;
+      ipcRenderer.send('change-volume', direction);
     });
 
     document.addEventListener('mousemove', (e) => {
       if (!isDraggingVolume) return;
-      updateVolumeFromMouse(e.clientY);
+      handleVolumeMovement(e.clientY);
     });
 
-    document.addEventListener('mouseup', () => {
-      isDraggingVolume = false;
+    document.addEventListener('mouseup', () => { isDraggingVolume = false; });
+
+    volumePopup.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const direction = e.deltaY < 0 ? 'up' : 'down';
+      volumeVisualLevel = direction === 'up' ? Math.min(100, volumeVisualLevel + 4) : Math.max(0, volumeVisualLevel - 4);
+      fillElement.style.height = `${volumeVisualLevel}%`;
+      thumbElement.style.bottom = `${volumeVisualLevel}%`;
+      ipcRenderer.send('change-volume', direction);
     });
+
+    // --- LYRICS HANDLING ENGINE CODE ---
+    let currentLyrics = [], activeLyricIndex = -1, loadedTrackId = "";
+    function toggleLyrics() {
+      const drawer = document.getElementById('lyrics-drawer'), btn = document.querySelector('.toggle-lyrics-btn');
+      isLyricsOpen = !isLyricsOpen;
+      ipcRenderer.send('toggle-lyrics-window', isLyricsOpen);
+      if (isLyricsOpen) {
+        drawer.classList.add('expanded'); btn.classList.add('open');
+        if (loadedTrackId !== currentTrackTitle) fetchLyrics();
+      } else {
+        drawer.classList.remove('expanded'); btn.classList.remove('open');
+      }
+    }
+    async function fetchLyrics() {
+      const title = document.getElementById('track-title').innerText, artist = document.getElementById('artist-name').innerText;
+      if (title === "Waiting for Media...") return;
+      const contentDiv = document.getElementById('lyrics-content');
+      contentDiv.innerHTML = '<p class="lyric-line active">Searching for lyrics...</p>';
+      contentDiv.style.transform = `translateY(0px)`;
+      try {
+        const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Not found");
+        const data = await response.json();
+        if (data && data.syncedLyrics) { parseLyrics(data.syncedLyrics); loadedTrackId = currentTrackTitle; }
+        else { contentDiv.innerHTML = '<p class="lyric-line active">No synced lyrics available</p>'; currentLyrics = []; }
+      } catch (err) { contentDiv.innerHTML = '<p class="lyric-line active">No lyrics found 😔</p>'; currentLyrics = []; }
+    }
+    function parseLyrics(lrcString) {
+      const lines = lrcString.split('\n'); currentLyrics = []; const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/;
+      lines.forEach(line => {
+        const match = timeRegex.exec(line);
+        if (match) {
+          const minutes = parseInt(match[1]), seconds = parseInt(match[2]); let ms = parseInt(match[3]);
+          if (match[3].length === 2) ms *= 10;
+          currentLyrics.push({ time: (minutes * 60 * 1000) + (seconds * 1000) + ms, text: line.replace(timeRegex, '').trim() });
+        }
+      });
+      renderLyrics();
+    }
+    function renderLyrics() {
+      const contentDiv = document.getElementById('lyrics-content'); contentDiv.innerHTML = '';
+      currentLyrics.forEach((lyric, index) => {
+        const p = document.createElement('p'); p.className = 'lyric-line'; p.id = `lyric-${index}`; p.innerText = lyric.text; contentDiv.appendChild(p);
+      });
+      activeLyricIndex = -1;
+    }
+    function syncLyrics() {
+      if (!isLyricsOpen || currentLyrics.length === 0) return;
+      let newActiveIndex = -1;
+      for (let i = 0; i < currentLyrics.length; i++) {
+        if (localProgress >= currentLyrics[i].time) newActiveIndex = i; else break;
+      }
+      if (newActiveIndex !== activeLyricIndex && newActiveIndex !== -1) {
+        if (activeLyricIndex !== -1) { const oldEl = document.getElementById(`lyric-${activeLyricIndex}`); if (oldEl) oldEl.classList.remove('active'); }
+        const newEl = document.getElementById(`lyric-${newActiveIndex}`);
+        if (newEl) {
+          newEl.classList.add('active');
+          const containerHeight = document.getElementById('live-lyrics-container').clientHeight;
+          const offset = newEl.offsetTop - (containerHeight / 2) + (newEl.clientHeight / 2);
+          document.getElementById('lyrics-content').style.transform = `translateY(-${Math.max(0, offset)}px)`;
+        }
+        activeLyricIndex = newActiveIndex;
+      }
+    }
   </script>
 </body>
 
