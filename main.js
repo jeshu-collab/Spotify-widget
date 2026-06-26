@@ -1,135 +1,114 @@
-const loudness = require('loudness');
-const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
-const { Worker } = require('worker_threads');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const { Worker } = require('worker_threads');
+const loudness = require('loudness');
+// ADDED: Required to send hardware media key commands to Windows
 const { exec } = require('child_process');
 
-app.commandLine.appendSwitch('ignore-certificate-errors');
-
 let widget;
-let tray = null;
-let internalSavedVol = 50;
-
-function startMediaTracker() {
-  const worker = new Worker(path.join(__dirname, 'media-worker.js'));
-  worker.on('message', (trackInfo) => {
-    if (widget) widget.webContents.send('update-track', trackInfo);
-  });
-  worker.on('error', (err) => {
-    console.error('Worker crashed:', err);
-  });
-}
-
-function runVbsCommand(command) {
-  let scriptPath = path.join(__dirname, 'media-keys.vbs');
-  if (scriptPath.includes('app.asar')) {
-    scriptPath = scriptPath.replace('app.asar', 'app.asar.unpacked');
-  }
-  exec(`cscript //nologo "${scriptPath}" ${command}`, (error) => {
-    if (error) console.error(`VBS command [${command}] failed:`, error);
-  });
-}
-
-ipcMain.on('media-command', (event, command) => {
-  runVbsCommand(command);
-});
-
-// --- TRUE ANDROID SYSTEM VOLUME ENGINE ---
-
-// 1. Fetches the exact PC volume when requested
-ipcMain.handle('get-system-volume', async () => {
-  try {
-    return await loudness.getVolume();
-  } catch (err) {
-    return 50; // Fallback
-  }
-});
-
-// 2. Sets the exact absolute percentage instantly without lag
-ipcMain.on('change-volume', async (event, data) => {
-  if (!data || data.value === undefined) return;
-  try {
-    await loudness.setVolume(data.value);
-  } catch (error) {
-    console.error("Native Volume Error:", error);
-  }
-});
-// --- RESIZING LIFECYCLE MANAGEMENT LOOP ---
-ipcMain.on('toggle-volume-frame', (event, isExpanding) => {
-  if (!widget) return;
-  const bounds = widget.getBounds();
-
-  if (isExpanding) {
-    widget.setMaximumSize(360, 140);
-    widget.setBounds({ width: 360, height: 140, x: bounds.x, y: bounds.y });
-  } else {
-    widget.setBounds({ width: 310, height: 140, x: bounds.x, y: bounds.y });
-    widget.setMaximumSize(310, 140);
-  }
-});
-
-ipcMain.on('toggle-lyrics-window', (event, isExpanding) => {
-  if (!widget) return;
-  const currentBounds = widget.getBounds();
-  if (isExpanding) {
-    widget.setMaximumSize(360, 300);
-    widget.setBounds({ width: currentBounds.width, height: 300 });
-    widget.setMinimumSize(310, 300);
-  } else {
-    widget.setMinimumSize(310, 140);
-    widget.setBounds({ width: currentBounds.width, height: 140 });
-    widget.setMaximumSize(360, 140);
-  }
-});
 
 function createWidget() {
   widget = new BrowserWindow({
-    width: 360,
-    height: 140,
-    minWidth: 360,
-    maxWidth: 360,
-    minHeight: 140,
-    maxHeight: 140,
-    frame: false,
+    width: 350, // <-- 1. Change this to 350
+    height: 150,
     transparent: true,
+    frame: false,
     alwaysOnTop: true,
-    skipTaskbar: true,
     resizable: false,
+    icon: path.join(__dirname, 'tray-icon.ico'),
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false,
-      webSecurity: false
+      contextIsolation: false
     }
   });
 
   widget.loadFile('index.html');
-  startMediaTracker();
-
-  const iconPath = path.join(__dirname, 'tray-icon.ico');
-  tray = new Tray(iconPath);
-  const contextMenu = Menu.buildFromTemplate([
-    { label: 'Show Widget', click: () => widget.show() },
-    { label: 'Hide Widget', click: () => widget.hide() },
-    { type: 'separator' },
-    { label: 'Quit', click: () => { app.isQuiting = true; app.quit(); } }
-  ]);
-  tray.setToolTip('Spotify Glass Widget');
-  tray.setContextMenu(contextMenu);
-
-  tray.on('click', () => {
-    widget.isVisible() ? widget.hide() : widget.show();
-  });
-
-  widget.on('close', (event) => {
-    if (!app.isQuiting) {
-      event.preventDefault();
-      widget.hide();
-    }
-    return false;
-  });
 }
 
-app.whenReady().then(createWidget);
+// --- 1. NEW: INSTANT MEDIA CONTROLS BRIDGE ---
+const fs = require('fs');
+const os = require('os');
+
+// 1. Create a lightning-fast script in the Windows Temp folder on startup
+const vbsPath = path.join(os.tmpdir(), 'fast-media-keys.vbs');
+
+// We only write the file if it doesn't already exist
+if (!fs.existsSync(vbsPath)) {
+  fs.writeFileSync(vbsPath, `
+    Set ws = CreateObject("WScript.Shell")
+    Select Case WScript.Arguments(0)
+      Case "toggle" ws.SendKeys(chr(179))
+      Case "next" ws.SendKeys(chr(176))
+      Case "prev" ws.SendKeys(chr(177))
+    End Select
+  `);
+}
+
+// 2. Listen for clicks and fire the script instantly
+ipcMain.on('media-command', (event, cmd) => {
+  // wscript.exe runs silently in the background in ~30ms
+  exec(`wscript.exe "${vbsPath}" ${cmd}`);
+});
+
+// --- 2. NEW: LYRICS WINDOW RESIZER ---
+// This physically expands the invisible desktop window so your lyrics aren't cut off
+
+// --- LYRICS WINDOW RESIZER (MIN/MAX BOUNDARY FIX) ---
+ipcMain.on('toggle-lyrics-window', (event, isOpen) => {
+  if (!widget) return;
+
+  if (isOpen) {
+    // 1. Raise the ceiling to allow growth
+    widget.setMaximumSize(350, 350);
+    // 2. Expand the window
+    widget.setBounds({ width: 350, height: 350 });
+    // 3. Raise the floor to lock it open
+    widget.setMinimumSize(350, 350);
+  } else {
+    // 1. Lower the floor to allow shrinking
+    widget.setMinimumSize(350, 150);
+    // 2. Shrink the window
+    widget.setBounds({ width: 350, height: 150 });
+    // 3. Lower the ceiling to lock it closed
+    widget.setMaximumSize(350, 150);
+  }
+});
+
+// --- FLAWLESS ANDROID VOLUME ENGINE ---
+ipcMain.handle('get-system-volume', async () => {
+  try { return await loudness.getVolume(); }
+  catch (err) { return 50; }
+});
+
+ipcMain.on('change-volume', async (event, data) => {
+  if (!data || data.value === undefined) return;
+  try { await loudness.setVolume(data.value); }
+  catch (error) { console.error("Volume Error:", error); }
+});
+
+// --- NATIVE MEDIA TRACKER ---
+function startMediaTracker() {
+  let workerPath = path.join(__dirname, 'media-worker.js');
+
+  // Jailbreak: Look in the unpacked folder when running the .exe
+  if (workerPath.includes('app.asar')) {
+    workerPath = workerPath.replace('app.asar', 'app.asar.unpacked');
+  }
+
+  const worker = new Worker(workerPath, { env: process.env });
+
+  worker.on('message', (trackInfo) => {
+    if (widget) widget.webContents.send('update-track', trackInfo);
+  });
+
+  worker.on('error', (err) => console.error('Worker crashed:', err));
+}
+
+app.whenReady().then(() => {
+  createWidget();
+  startMediaTracker();
+});
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });

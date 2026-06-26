@@ -1,34 +1,35 @@
 {
-  "name": "spotify-widget",
+  "name": "spotify-glass-widget",
   "version": "1.0.0",
-  "description": "Windows 11 Spotify Widget",
+  "description": "A transparent desktop Spotify widget",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder"
   },
-  "devDependencies": {
-    "electron": "^31.0.0",
-    "electron-builder": "^26.15.3"
-  },
+  "author": "Jaswanth",
+  "license": "ISC",
   "dependencies": {
-    "@coooookies/windows-smtc-monitor": "^1.0.12",
-    "loudness": "^0.4.2"
+    "@coooookies/windows-smtc-monitor": "^1.0.4",
+    "loudness": "^0.4.1"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.spotify.glasswidget",
+    "appId": "com.spotify.widget",
     "productName": "Spotify Glass Widget",
+    "asar": true,
     "asarUnpack": [
-      "media-keys.vbs"
+      "node_modules/@coooookies/windows-smtc-monitor/**/*",
+      "media-worker.js",
+      "**/*.vbs"
     ],
     "win": {
-      "target": "portable"
-    },
-    "portable": {
-      "artifactName": "SpotifyWidget.exe"
-    },
-    "files": [
-      "**/*"
-    ]
+      "target": "nsis",
+      "icon": "installer-icon.png",
+      "noConsole": true
+    }
   }
 }
