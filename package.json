@@ -1,6 +1,6 @@
 {
   "name": "spotify-glass-widget",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "A transparent desktop Spotify widget",
   "main": "main.js",
   "scripts": {
@@ -22,14 +22,17 @@
     "productName": "Spotify Glass Widget",
     "asar": true,
     "asarUnpack": [
-      "node_modules/@coooookies/windows-smtc-monitor/**/*",
+      "node_modules/@coooookies/**/*",
       "media-worker.js",
       "**/*.vbs"
     ],
     "win": {
       "target": "nsis",
-      "icon": "installer-icon.png",
-      "noConsole": true
+      "icon": "installer-icon.png"
     }
+  },
+  "win": {
+    "target": "nsis",
+    "icon": "installer-icon.png"
   }
 }
